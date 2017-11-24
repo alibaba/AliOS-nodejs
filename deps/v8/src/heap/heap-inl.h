@@ -25,6 +25,7 @@
 #include "src/objects/scope-info.h"
 #include "src/objects/script-inl.h"
 #include "src/profiler/heap-profiler.h"
+#include "src/snapshot/startup-serializer.h"
 #include "src/string-hasher.h"
 
 namespace v8 {
@@ -582,6 +583,27 @@ void Heap::ExternalStringTable::IterateAll(RootVisitor* v) {
   if (!old_space_strings_.empty()) {
     v->VisitRootPointers(Root::kExternalStringsTable, old_space_strings_.data(),
                          old_space_strings_.data() + old_space_strings_.size());
+  }
+}
+
+void Heap::ExternalStringTable::IterateAll(RootVisitor* v, VisitMode mode) {
+  if (mode == VISIT_ALL_FOR_STARTUP_DESERIALIZATION) {
+    StartupSerializer::IterateExternalStringTable(heap_->isolate_, &new_space_strings_, v);
+    StartupSerializer::IterateExternalStringTable(heap_->isolate_, &old_space_strings_, v);
+  } else if (mode == VISIT_ALL_FOR_STARTUP_SERIALIZATION) {
+    Object* undefined = heap_->undefined_value();
+    IterateNewSpaceStrings(v);
+    // end sentinel
+    v->VisitRootPointer(Root::kExternalStringsTable, &undefined);
+
+    if (!old_space_strings_.empty()) {
+      v->VisitRootPointers(Root::kExternalStringsTable, old_space_strings_.data(),
+          old_space_strings_.data() + old_space_strings_.size());
+    }
+    // end sentinel
+    v->VisitRootPointer(Root::kExternalStringsTable, &undefined);
+  } else {
+    IterateAll(v);
   }
 }
 

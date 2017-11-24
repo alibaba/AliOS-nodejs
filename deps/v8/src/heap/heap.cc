@@ -5266,7 +5266,7 @@ void Heap::IterateWeakRoots(RootVisitor* v, VisitMode mode) {
   v->Synchronize(VisitorSynchronization::kStringTable);
   if (!isMinorGC && mode != VISIT_ALL_IN_SWEEP_NEWSPACE) {
     // Scavenge collections have special processing for this.
-    external_string_table_.IterateAll(v);
+    external_string_table_.IterateAll(v, mode);
   }
   v->Synchronize(VisitorSynchronization::kExternalStringsTable);
 }

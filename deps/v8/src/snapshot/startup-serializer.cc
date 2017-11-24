@@ -26,6 +26,17 @@ StartupSerializer::~StartupSerializer() {
   OutputStatistics("StartupSerializer");
 }
 
+void StartupSerializer::IterateExternalStringTable(Isolate* isolate,
+                                                   std::vector<Object*>* strings,
+                                                   RootVisitor* visitor) {
+  for (size_t i = 0;; ++i) {
+    Object* obj;
+    visitor->VisitRootPointer(Root::kExternalStringsTable, &obj);
+    if (obj->IsUndefined(isolate)) break;
+    if (obj->IsExternalString()) strings->push_back(obj);
+  }
+}
+
 void StartupSerializer::SerializeObject(HeapObject* obj, HowToCode how_to_code,
                                         WhereToPoint where_to_point, int skip) {
   DCHECK(!obj->IsJSFunction());
@@ -87,7 +98,7 @@ void StartupSerializer::SerializeWeakReferencesAndDeferred() {
   // one entry with 'undefined' to terminate the partial snapshot cache.
   Object* undefined = isolate()->heap()->undefined_value();
   VisitRootPointer(Root::kPartialSnapshotCache, &undefined);
-  isolate()->heap()->IterateWeakRoots(this, VISIT_ALL);
+  isolate()->heap()->IterateWeakRoots(this, VISIT_ALL_FOR_STARTUP_SERIALIZATION);
   SerializeDeferredObjects();
   Pad();
 }

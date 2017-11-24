@@ -1564,6 +1564,7 @@ class Heap {
     inline void AddString(String* string);
 
     inline void IterateAll(RootVisitor* v);
+    inline void IterateAll(RootVisitor* v, VisitMode mode);
     inline void IterateNewSpaceStrings(RootVisitor* v);
     inline void PromoteAllNewSpaceStrings();
 

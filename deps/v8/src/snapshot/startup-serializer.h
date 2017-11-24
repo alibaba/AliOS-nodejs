@@ -6,6 +6,7 @@
 #define V8_SNAPSHOT_STARTUP_SERIALIZER_H_
 
 #include <bitset>
+#include <vector>
 #include "include/v8.h"
 #include "src/snapshot/serializer.h"
 
@@ -18,6 +19,9 @@ class StartupSerializer : public Serializer {
       Isolate* isolate,
       v8::SnapshotCreator::FunctionCodeHandling function_code_handling);
   ~StartupSerializer() override;
+
+  static void IterateExternalStringTable(Isolate* isolate,
+              std::vector<Object*>* strings, RootVisitor* visitor);
 
   // Serialize the current state of the heap.  The order is:
   // 1) Immortal immovable roots
