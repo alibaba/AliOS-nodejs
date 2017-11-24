@@ -23,6 +23,7 @@
 #include "node_watchdog.h"
 #include "base_object-inl.h"
 #include "v8-debug.h"
+#include "node_external_refs.h"
 
 namespace node {
 
@@ -1169,6 +1170,19 @@ void InitContextify(Local<Object> target,
 }
 
 }  // anonymous namespace
+
+void ContextifyRegisterExternalReferences(ExternalReferenceRegister* reg) {
+  // ContextifyContext
+  reg->add(ContextifyContext::RunInDebugContext);
+  reg->add(ContextifyContext::MakeContext);
+  reg->add(ContextifyContext::IsContext);
+
+  // ContextifyScript
+  reg->add(ContextifyScript::New);
+  reg->add(ContextifyScript::RunInContext);
+  reg->add(ContextifyScript::RunInThisContext);
+}
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(contextify, node::InitContextify)

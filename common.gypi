@@ -33,7 +33,7 @@
     'v8_enable_disassembler': 1,
 
     # Don't bake anything extra into the snapshot.
-    'v8_use_external_startup_data%': 0,
+    'v8_use_external_startup_data': 1,
 
     # Some STL containers (e.g. std::vector) do not preserve ABI compatibility
     # between debug and non-debug mode.

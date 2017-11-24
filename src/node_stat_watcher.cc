@@ -135,5 +135,10 @@ void StatWatcher::Stop() {
   MakeWeak<StatWatcher>(this);
 }
 
+void StatWatcher::RegisterExternalReferences(ExternalReferenceRegister* reg) {
+  reg->add(New);
+  reg->add(Start);
+  reg->add(Stop);
+}
 
 }  // namespace node

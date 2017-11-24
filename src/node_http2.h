@@ -1055,15 +1055,15 @@ class ExternalHeader :
   static MaybeLocal<String> New(Environment* env, nghttp2_rcbuf* buf) {
     if (nghttp2_rcbuf_is_static(buf)) {
       auto& static_str_map = env->isolate_data()->http2_static_strs;
-      v8::Eternal<v8::String>& eternal = static_str_map[buf];
-      if (eternal.IsEmpty()) {
+      v8::Persistent<v8::String>& persistent = static_str_map[buf];
+      if (persistent.IsEmpty()) {
         Local<String> str =
             GetInternalizedString(env, nghttp2_rcbuf_get_buf(buf))
                 .ToLocalChecked();
-        eternal.Set(env->isolate(), str);
+        persistent.Reset(env->isolate(), str);
         return str;
       }
-      return eternal.Get(env->isolate());
+      return persistent.Get(env->isolate());
     }
 
     nghttp2_vec vec = nghttp2_rcbuf_get_buf(buf);

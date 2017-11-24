@@ -347,6 +347,10 @@ class IsolateData {
   IsolateData(v8::Isolate* isolate, uv_loop_t* event_loop,
               MultiIsolatePlatform* platform = nullptr,
               uint32_t* zero_fill_field = nullptr);
+  IsolateData(v8::Isolate* isolate, v8::Local<v8::Context> context,
+              v8::Local<v8::Object> eternal_list, uv_loop_t* event_loop,
+              MultiIsolatePlatform* platform = nullptr,
+              uint32_t* zero_fill_field = nullptr);
   ~IsolateData();
   inline uv_loop_t* event_loop() const;
   inline uint32_t* zero_fill_field() const;
@@ -355,21 +359,23 @@ class IsolateData {
 #define VP(PropertyName, StringValue) V(v8::Private, PropertyName)
 #define VS(PropertyName, StringValue) V(v8::String, PropertyName)
 #define V(TypeName, PropertyName)                                             \
-  inline v8::Local<TypeName> PropertyName(v8::Isolate* isolate) const;
+  inline v8::Local<TypeName> PropertyName(v8::Isolate* isolate) const;        \
+  inline void set_ ## PropertyName(v8::Isolate* isolate, v8::Local<TypeName> value);
   PER_ISOLATE_PRIVATE_SYMBOL_PROPERTIES(VP)
   PER_ISOLATE_STRING_PROPERTIES(VS)
 #undef V
 #undef VS
 #undef VP
 
-  std::unordered_map<nghttp2_rcbuf*, v8::Eternal<v8::String>> http2_static_strs;
+  std::unordered_map<nghttp2_rcbuf*, v8::Persistent<v8::String>> http2_static_strs;
   inline v8::Isolate* isolate() const;
+  void ResetAll();
 
  private:
 #define VP(PropertyName, StringValue) V(v8::Private, PropertyName)
 #define VS(PropertyName, StringValue) V(v8::String, PropertyName)
 #define V(TypeName, PropertyName)                                             \
-  v8::Eternal<TypeName> PropertyName ## _;
+  v8::Persistent<TypeName> PropertyName ## _;
   PER_ISOLATE_PRIVATE_SYMBOL_PROPERTIES(VP)
   PER_ISOLATE_STRING_PROPERTIES(VS)
 #undef V
@@ -410,6 +416,7 @@ class Environment {
     };
 
     AsyncHooks() = delete;
+    ~AsyncHooks();
 
     inline AliasedBuffer<uint32_t, v8::Uint32Array>& fields();
     inline int fields_count() const;
@@ -446,7 +453,7 @@ class Environment {
     friend class Environment;  // So we can call the constructor.
     inline explicit AsyncHooks(v8::Isolate* isolate);
     // Keep a list of all Persistent strings used for Provider types.
-    v8::Eternal<v8::String> providers_[AsyncWrap::PROVIDERS_LENGTH];
+    v8::Persistent<v8::String> providers_[AsyncWrap::PROVIDERS_LENGTH];
     // Used by provider_string().
     v8::Isolate* isolate_;
     // Stores the ids of the current execution context stack.
@@ -526,6 +533,7 @@ class Environment {
       const v8::PropertyCallbackInfo<T>& info);
 
   inline Environment(IsolateData* isolate_data, v8::Local<v8::Context> context);
+  Environment(IsolateData* isolate_data, v8::Local<v8::Context> context, v8::Local<v8::Object> persistent_list);
   inline ~Environment();
 
   void Start(int argc,
@@ -533,6 +541,7 @@ class Environment {
              int exec_argc,
              const char* const* exec_argv,
              bool start_profiler_idle_notifier);
+
   void AssignToContext(v8::Local<v8::Context> context);
   void CleanupHandles();
 
@@ -546,6 +555,8 @@ class Environment {
   static inline Environment* from_immediate_check_handle(uv_check_t* handle);
   inline uv_check_t* immediate_check_handle();
   inline uv_idle_t* immediate_idle_handle();
+  inline uv_prepare_t* idle_prepare_handle();
+  inline uv_check_t* idle_check_handle();
 
   // Register clean-up cb to be called on environment destruction.
   inline void RegisterHandleCleanup(uv_handle_t* handle,

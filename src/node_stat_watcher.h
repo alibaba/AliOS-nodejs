@@ -29,6 +29,7 @@
 #include "env.h"
 #include "uv.h"
 #include "v8.h"
+#include "node_external_refs.h"
 
 namespace node {
 
@@ -37,6 +38,7 @@ class StatWatcher : public AsyncWrap {
   ~StatWatcher() override;
 
   static void Initialize(Environment* env, v8::Local<v8::Object> target);
+  static void RegisterExternalReferences(ExternalReferenceRegister* reg);
 
  protected:
   StatWatcher(Environment* env, v8::Local<v8::Object> wrap);

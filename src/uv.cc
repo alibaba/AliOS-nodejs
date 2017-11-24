@@ -23,6 +23,7 @@
 #include "node.h"
 #include "node_internals.h"
 #include "env-inl.h"
+#include "node_external_refs.h"
 
 namespace node {
 namespace {
@@ -57,6 +58,11 @@ void InitializeUV(Local<Object> target,
 
 
 }  // anonymous namespace
+
+void UVRegisterExternalReferences(ExternalReferenceRegister* reg) {
+  reg->add(ErrName);
+}
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(uv, node::InitializeUV)

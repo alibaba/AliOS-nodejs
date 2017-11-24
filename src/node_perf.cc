@@ -1,5 +1,6 @@
 #include "node_internals.h"
 #include "node_perf.h"
+#include "node_external_refs.h"
 
 #include <vector>
 
@@ -225,7 +226,7 @@ void MarkGarbageCollectionEnd(Isolate* isolate,
   CHECK_EQ(0, uv_async_send(async));
 }
 
-inline void SetupGarbageCollectionTracking(Environment* env) {
+void SetupGarbageCollectionTracking(Environment* env) {
   env->isolate()->AddGCPrologueCallback(MarkGarbageCollectionStart);
   env->isolate()->AddGCEpilogueCallback(MarkGarbageCollectionEnd,
                                         static_cast<void*>(env));
@@ -384,7 +385,20 @@ void Init(Local<Object> target,
                             constants,
                             attr).ToChecked();
 
-  SetupGarbageCollectionTracking(env);
+  // SetupGarbageCollectionTracking(env);
+}
+
+void RegisterExternalReferences(ExternalReferenceRegister* reg) {
+  reg->add(PerformanceEntry::New);
+  reg->add(GetPerformanceEntryName);
+  reg->add(GetPerformanceEntryType);
+  reg->add(GetPerformanceEntryStartTime);
+  reg->add(GetPerformanceEntryDuration);
+  reg->add(Mark);
+  reg->add(Measure);
+  reg->add(MarkMilestone);
+  reg->add(SetupPerformanceObservers);
+  reg->add(Timerify);
 }
 
 }  // namespace performance

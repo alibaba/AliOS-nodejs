@@ -50,6 +50,7 @@
 #include "util-inl.h"
 #include "base_object-inl.h"
 #include "v8.h"
+#include "node_external_refs.h"
 
 #include <unicode/utypes.h>
 #include <unicode/putil.h>
@@ -869,6 +870,18 @@ void Init(Local<Object> target,
   env->SetMethod(target, "getConverter", ConverterObject::Create);
   env->SetMethod(target, "decode", ConverterObject::Decode);
   env->SetMethod(target, "hasConverter", ConverterObject::Has);
+}
+
+void RegisterExternalReferences(ExternalReferenceRegister* reg) {
+  reg->add(ToUnicode);
+  reg->add(ToASCII);
+  reg->add(GetStringWidth);
+  reg->add(GetVersion);
+  reg->add(ICUErrorName);
+  reg->add(Transcode);
+  reg->add(ConverterObject::Create);
+  reg->add(ConverterObject::Decode);
+  reg->add(ConverterObject::Has);
 }
 
 }  // namespace i18n

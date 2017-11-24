@@ -287,6 +287,12 @@ void SetupProcessObject(Environment* env,
                         int exec_argc,
                         const char* const* exec_argv);
 
+void SetupProcessObjectForSnapshot(Environment* env,
+                        int argc,
+                        const char* const* argv,
+                        int exec_argc,
+                        const char* const* exec_argv);
+
 // Call _register<module_name> functions for all of
 // the built-in modules. Because built-in modules don't
 // use the __attribute__((constructor)). Need to

@@ -21,6 +21,7 @@
 
 #include "node.h"
 #include "node_buffer.h"
+#include "node_external_refs.h"
 
 #include "env-inl.h"
 #include "string_bytes.h"
@@ -1297,6 +1298,47 @@ void Initialize(Local<Object> target,
 }
 
 }  // anonymous namespace
+
+void RegisterExternalReferences(ExternalReferenceRegister* reg) {
+  // Initialize
+  reg->add(SetupBufferJS);
+  reg->add(CreateFromString);
+  reg->add(ByteLengthUtf8);
+  reg->add(Copy);
+  reg->add(Compare);
+  reg->add(CompareOffset);
+  reg->add(Fill);
+  reg->add(IndexOfBuffer);
+  reg->add(IndexOfNumber);
+  reg->add(IndexOfString);
+  reg->add(ReadDoubleBE);
+  reg->add(ReadDoubleLE);
+  reg->add(ReadFloatBE);
+  reg->add(ReadFloatLE);
+  reg->add(WriteDoubleBE);
+  reg->add(WriteDoubleLE);
+  reg->add(WriteFloatBE);
+  reg->add(WriteFloatLE);
+  reg->add(Swap16);
+  reg->add(Swap32);
+  reg->add(Swap64);
+  reg->add(EncodeUtf8String);
+
+  // SetupBufferJS
+  reg->add(StringSlice<ASCII>);
+  reg->add(StringSlice<BASE64>);
+  reg->add(StringSlice<LATIN1>);
+  reg->add(StringSlice<HEX>);
+  reg->add(StringSlice<UCS2>);
+  reg->add(StringSlice<UTF8>);
+  reg->add(StringWrite<ASCII>);
+  reg->add(StringWrite<BASE64>);
+  reg->add(StringWrite<LATIN1>);
+  reg->add(StringWrite<HEX>);
+  reg->add(StringWrite<UCS2>);
+  reg->add(StringWrite<UTF8>);
+}
+
 }  // namespace Buffer
 }  // namespace node
 

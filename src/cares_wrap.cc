@@ -27,6 +27,7 @@
 #include "req_wrap-inl.h"
 #include "util-inl.h"
 #include "uv.h"
+#include "node_external_refs.h"
 
 #include <errno.h>
 #include <stdlib.h>
@@ -2256,6 +2257,36 @@ void Initialize(Local<Object> target,
 }
 
 }  // anonymous namespace
+
+void RegisterExternalReferences(ExternalReferenceRegister* reg) {
+  reg->add(ChannelWrap::New);
+  // SetMethod
+  reg->add(GetAddrInfo);
+  reg->add(GetNameInfo);
+  reg->add(IsIP);
+  reg->add(IsIPv4);
+  reg->add(IsIPv6);
+  reg->add(CanonicalizeIP);
+  reg->add(StrError);
+
+  // SetProtoMethod
+  reg->add(Query<QueryAnyWrap>);
+  reg->add(Query<QueryAWrap>);
+  reg->add(Query<QueryAaaaWrap>);
+  reg->add(Query<QueryCnameWrap>);
+  reg->add(Query<QueryMxWrap>);
+  reg->add(Query<QueryNsWrap>);
+  reg->add(Query<QueryTxtWrap>);
+  reg->add(Query<QuerySrvWrap>);
+  reg->add(Query<QueryPtrWrap>);
+  reg->add(Query<QueryNaptrWrap>);
+  reg->add(Query<QuerySoaWrap>);
+  reg->add(Query<GetHostByAddrWrap>);
+  reg->add(GetServers);
+  reg->add(SetServers);
+  reg->add(Cancel);
+}
+
 }  // namespace cares_wrap
 }  // namespace node
 

@@ -2,6 +2,7 @@
 #include "node_internals.h"
 #include "base_object-inl.h"
 #include "node_i18n.h"
+#include "node_external_refs.h"
 
 #include <string>
 #include <vector>
@@ -2217,6 +2218,16 @@ static void Init(Local<Object> target,
   PARSESTATES(XX)
 #undef XX
 }
+
+void RegisterExternalReferences(ExternalReferenceRegister* reg) {
+  reg->add(Parse);
+  reg->add(EncodeAuthSet);
+  reg->add(ToUSVString);
+  reg->add(DomainToASCII);
+  reg->add(DomainToUnicode);
+  reg->add(SetURLConstructor);
+}
+
 }  // namespace url
 }  // namespace node
 

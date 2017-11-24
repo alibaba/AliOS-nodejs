@@ -22,6 +22,7 @@
 #include "node_buffer.h"
 #include "node_internals.h"
 #include "node_stat_watcher.h"
+#include "node_external_refs.h"
 
 #include "req_wrap-inl.h"
 #include "string_bytes.h"
@@ -1471,6 +1472,48 @@ void InitFs(Local<Object> target,
       FIXED_ONE_BYTE_STRING(env->isolate(), "FSReqWrap");
   fst->SetClassName(wrapString);
   target->Set(wrapString, fst->GetFunction());
+}
+
+void FSRegisterExternalReferences(ExternalReferenceRegister* reg) {
+  reg->add(NewFSReqWrap);
+  reg->add(Access);
+  reg->add(Close);
+  reg->add(Open);
+  reg->add(Read);
+  reg->add(Fdatasync);
+  reg->add(Fsync);
+  reg->add(Rename);
+  reg->add(FTruncate);
+  reg->add(RMDir);
+  reg->add(MKDir);
+  reg->add(ReadDir);
+  reg->add(InternalModuleReadFile);
+  reg->add(InternalModuleStat);
+  reg->add(Stat);
+  reg->add(LStat);
+  reg->add(FStat);
+  reg->add(Link);
+  reg->add(Symlink);
+  reg->add(ReadLink);
+  reg->add(Unlink);
+  reg->add(WriteBuffer);
+  reg->add(WriteBuffers);
+  reg->add(WriteString);
+  reg->add(RealPath);
+  reg->add(CopyFile);
+  reg->add(Chmod);
+  reg->add(FChmod);
+  // reg->add(LChmod);
+  reg->add(Chown);
+  reg->add(FChown);
+  // reg->add(LChown);
+  reg->add(UTimes);
+  reg->add(FUTimes);
+  reg->add(Mkdtemp);
+  reg->add(GetStatValues);
+
+  // StatWatcher::Initialize
+  StatWatcher::RegisterExternalReferences(reg);
 }
 
 }  // end namespace node

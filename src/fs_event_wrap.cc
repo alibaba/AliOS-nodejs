@@ -25,6 +25,7 @@
 #include "node.h"
 #include "handle_wrap.h"
 #include "string_bytes.h"
+#include "node_external_refs.h"
 
 #include <stdlib.h>
 
@@ -219,6 +220,13 @@ void FSEventWrap::Close(const FunctionCallbackInfo<Value>& args) {
 }
 
 }  // anonymous namespace
+
+void FSEventWrapRegisterExternalReferences(ExternalReferenceRegister* reg) {
+  reg->add(FSEventWrap::New);
+  reg->add(FSEventWrap::Start);
+  reg->add(FSEventWrap::Close);
+}
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(fs_event_wrap, node::FSEventWrap::Initialize)

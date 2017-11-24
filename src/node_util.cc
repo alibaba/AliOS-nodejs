@@ -1,5 +1,6 @@
 #include "node_internals.h"
 #include "node_watchdog.h"
+#include "node_external_refs.h"
 
 namespace node {
 namespace util {
@@ -225,6 +226,24 @@ void Initialize(Local<Object> target,
   env->SetMethod(target, "createPromise", CreatePromise);
   env->SetMethod(target, "promiseResolve", PromiseResolve);
   env->SetMethod(target, "promiseReject", PromiseReject);
+}
+
+void RegisterExternalReferences(ExternalReferenceRegister* reg) {
+#define V(lcname, ucname) reg->add(ucname);
+  VALUE_METHOD_MAP(V)
+#undef V
+  reg->add(IsAnyArrayBuffer);
+  reg->add(GetHiddenValue);
+  reg->add(SetHiddenValue);
+  reg->add(GetPromiseDetails);
+  reg->add(GetProxyDetails);
+  reg->add(SafeToString);
+  reg->add(StartSigintWatchdog);
+  reg->add(StopSigintWatchdog);
+  reg->add(WatchdogHasPendingSigint);
+  reg->add(CreatePromise);
+  reg->add(PromiseResolve);
+  reg->add(PromiseReject);
 }
 
 }  // namespace util

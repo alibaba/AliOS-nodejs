@@ -22,6 +22,7 @@
 #include "async_wrap-inl.h"
 #include "env-inl.h"
 #include "util-inl.h"
+#include "node_external_refs.h"
 
 #include "uv.h"
 #include "v8.h"
@@ -819,6 +820,26 @@ async_context EmitAsyncInit(Isolate* isolate,
 void EmitAsyncDestroy(Isolate* isolate, async_context asyncContext) {
   AsyncWrap::EmitDestroy(
       Environment::GetCurrent(isolate), asyncContext.async_id);
+}
+
+void AsyncWrapRegisterExternalReferences(ExternalReferenceRegister* reg) {
+  reg->add(SetupHooks);
+
+  reg->add(AsyncWrap::PushAsyncIds);
+  reg->add(AsyncWrap::PopAsyncIds);
+  reg->add(AsyncWrap::AsyncIdStackSize);
+  reg->add(AsyncWrap::ClearAsyncIdStack);
+  reg->add(AsyncWrap::QueueDestroyAsyncId);
+  reg->add(EnablePromiseHook);
+  reg->add(DisablePromiseHook);
+  reg->add(RegisterDestroyHook);
+
+  // AddWrapMethods
+  reg->add(AsyncWrap::GetAsyncId);
+  reg->add(AsyncWrap::AsyncReset);
+
+  reg->add(PromiseWrap::GetPromise);
+  reg->add(PromiseWrap::getParentAsyncId);
 }
 
 }  // namespace node

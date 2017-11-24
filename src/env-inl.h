@@ -74,13 +74,20 @@ inline Environment::AsyncHooks::AsyncHooks(v8::Isolate* isolate)
   // an array so the array index matches the PROVIDER id offset. This way the
   // strings can be retrieved quickly.
 #define V(Provider)                                                           \
-  providers_[AsyncWrap::PROVIDER_ ## Provider].Set(                           \
+  providers_[AsyncWrap::PROVIDER_ ## Provider].Reset(                         \
       isolate_,                                                               \
       v8::String::NewFromOneByte(                                             \
         isolate_,                                                             \
         reinterpret_cast<const uint8_t*>(#Provider),                          \
         v8::NewStringType::kInternalized,                                     \
         sizeof(#Provider) - 1).ToLocalChecked());
+  NODE_ASYNC_PROVIDER_TYPES(V)
+#undef V
+}
+
+inline Environment::AsyncHooks::~AsyncHooks() {
+#define V(Provider)                                                           \
+  providers_[AsyncWrap::PROVIDER_ ## Provider].Reset();
   NODE_ASYNC_PROVIDER_TYPES(V)
 #undef V
 }
@@ -345,6 +352,14 @@ inline uv_idle_t* Environment::immediate_idle_handle() {
   return &immediate_idle_handle_;
 }
 
+inline uv_prepare_t* Environment::idle_prepare_handle() {
+  return &idle_prepare_handle_;
+}
+
+inline uv_check_t* Environment::idle_check_handle() {
+  return &idle_check_handle_;
+}
+
 inline void Environment::RegisterHandleCleanup(uv_handle_t* handle,
                                                HandleCleanupCb cb,
                                                void *arg) {
@@ -590,6 +605,11 @@ inline void Environment::SetTemplateMethod(v8::Local<v8::FunctionTemplate> that,
   v8::Local<TypeName> IsolateData::PropertyName(v8::Isolate* isolate) const { \
     /* Strings are immutable so casting away const-ness here is okay. */      \
     return const_cast<IsolateData*>(this)->PropertyName ## _.Get(isolate);    \
+  }                                                                           \
+  inline                                                                      \
+  void IsolateData::set_ ## PropertyName(v8::Isolate* isolate,               \
+                                          v8::Local<TypeName> value) {        \
+    PropertyName ## _.Reset(isolate, value);                                  \
   }
   PER_ISOLATE_PRIVATE_SYMBOL_PROPERTIES(VP)
   PER_ISOLATE_STRING_PROPERTIES(VS)
