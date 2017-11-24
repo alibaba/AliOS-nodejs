@@ -182,7 +182,9 @@ TEST(VectorSlotClearing) {
   Handle<AllocationSite> site = factory->NewAllocationSite();
   vector->Set(helper.slot(2), *site);
 
-  vector->ClearSlots(*f);
+  if (vector->ClearSlots(isolate)) {
+    IC::OnFeedbackChanged(isolate, *vector, *f);
+  }
 
   // The feedback vector slots are cleared. AllocationSites are still granted
   // an exemption from clearing, as are smis.
