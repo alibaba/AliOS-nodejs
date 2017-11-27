@@ -569,6 +569,15 @@ void ModuleWrap::Initialize(Local<Object> target,
   env->SetMethod(target, "resolve", node::loader::ModuleWrap::Resolve);
 }
 
+void ModuleWrap::RegisterExternalReferences(ExternalReferenceRegister* reg) {
+  reg->add(New);
+  reg->add(Link);
+  reg->add(Instantiate);
+  reg->add(Evaluate);
+  reg->add(Namespace);
+  reg->add(node::loader::ModuleWrap::Resolve);
+}
+
 }  // namespace loader
 }  // namespace node
 

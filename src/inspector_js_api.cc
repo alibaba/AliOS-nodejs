@@ -4,6 +4,7 @@
 #include "node_internals.h"
 #include "v8.h"
 #include "v8-inspector.h"
+#include "node_external_refs.h"
 
 namespace node {
 namespace inspector {
@@ -345,6 +346,24 @@ void InitInspectorBindings(Local<Object> target, Local<Value> unused,
 }
 
 }  // namespace
+
+void RegisterExternalReferences(ExternalReferenceRegister* reg) {
+  reg->add(JSBindingsConnection::New);
+  reg->add(InspectorConsoleCall);
+  reg->add(AddCommandLineAPI);
+  reg->add(CallAndPauseOnStart);
+  reg->add(Open);
+  reg->add(Url);
+  reg->add(AsyncTaskScheduledWrapper);
+  reg->add(InvokeAsyncTaskFnWithId<&Agent::AsyncTaskCanceled>);
+  reg->add(InvokeAsyncTaskFnWithId<&Agent::AsyncTaskStarted>);
+  reg->add(InvokeAsyncTaskFnWithId<&Agent::AsyncTaskFinished>);
+  reg->add(RegisterAsyncHookWrapper);
+  reg->add(IsEnabled);
+  reg->add(JSBindingsConnection::Dispatch);
+  reg->add(JSBindingsConnection::Disconnect);
+}
+
 }  // namespace inspector
 }  // namespace node
 

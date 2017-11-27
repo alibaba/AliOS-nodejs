@@ -8,6 +8,7 @@
 #include <vector>
 #include "node_url.h"
 #include "base_object-inl.h"
+#include "node_external_refs.h"
 
 namespace node {
 namespace loader {
@@ -23,6 +24,7 @@ class ModuleWrap : public BaseObject {
   static void Initialize(v8::Local<v8::Object> target,
                          v8::Local<v8::Value> unused,
                          v8::Local<v8::Context> context);
+  static void RegisterExternalReferences(ExternalReferenceRegister* reg);
 
  private:
   ModuleWrap(Environment* env,

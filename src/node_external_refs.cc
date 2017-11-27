@@ -8,6 +8,7 @@
 #include "node.h"
 #include "env.h"
 #include "node_external_refs.h"
+#include "module_wrap.h"
 
 #if 0
 #include "node_buffer.h"
@@ -47,6 +48,9 @@ namespace util {
   extern void RegisterExternalReferences(ExternalReferenceRegister* reg);
 }
 namespace url {
+  extern void RegisterExternalReferences(ExternalReferenceRegister* reg);
+}
+namespace inspector {
   extern void RegisterExternalReferences(ExternalReferenceRegister* reg);
 }
 
@@ -95,6 +99,8 @@ void InitExternalReferences(ExternalReferenceRegister* reg, uint8_t* env_addr) {
   util::RegisterExternalReferences(reg);
   UVRegisterExternalReferences(reg);
   url::RegisterExternalReferences(reg);
+  inspector::RegisterExternalReferences(reg);
+  loader::ModuleWrap::RegisterExternalReferences(reg);
 #if 0
 
   util::RegisterExternalReferences(reg);
