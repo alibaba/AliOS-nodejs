@@ -299,16 +299,15 @@ class ModuleWrap;
   V(zero_return_string, "ZERO_RETURN")
 
 #define ENVIRONMENT_STRONG_PERSISTENT_PROPERTIES(V)                           \
-  V(as_external, v8::External)                                                \
   V(async_hooks_destroy_function, v8::Function)                               \
   V(async_hooks_init_function, v8::Function)                                  \
   V(async_hooks_before_function, v8::Function)                                \
   V(async_hooks_after_function, v8::Function)                                 \
   V(async_hooks_promise_resolve_function, v8::Function)                       \
   V(binding_cache_object, v8::Object)                                         \
+  V(context, v8::Context)                                                     \
   V(internal_binding_cache_object, v8::Object)                                \
   V(buffer_prototype_object, v8::Object)                                      \
-  V(context, v8::Context)                                                     \
   V(domains_stack_array, v8::Array)                                           \
   V(http2ping_constructor_template, v8::ObjectTemplate)                       \
   V(http2stream_constructor_template, v8::ObjectTemplate)                     \
@@ -318,6 +317,7 @@ class ModuleWrap;
   V(pipe_constructor_template, v8::FunctionTemplate)                          \
   V(performance_entry_callback, v8::Function)                                 \
   V(performance_entry_template, v8::Function)                                 \
+  V(process_entry, v8::Function)                                              \
   V(process_object, v8::Object)                                               \
   V(promise_reject_function, v8::Function)                                    \
   V(promise_wrap_template, v8::ObjectTemplate)                                \
@@ -334,6 +334,7 @@ class ModuleWrap;
   V(vm_parsing_context_symbol, v8::Symbol)                                    \
   V(url_constructor_function, v8::Function)                                   \
   V(write_wrap_constructor_function, v8::Function)                            \
+  V(tick_info_array_buffer, v8::ArrayBuffer)
 
 class Environment;
 
@@ -347,9 +348,8 @@ class IsolateData {
   IsolateData(v8::Isolate* isolate, uv_loop_t* event_loop,
               MultiIsolatePlatform* platform = nullptr,
               uint32_t* zero_fill_field = nullptr);
-  IsolateData(v8::Isolate* isolate, v8::Local<v8::Context> context,
-              v8::Local<v8::Object> eternal_list, uv_loop_t* event_loop,
-              MultiIsolatePlatform* platform = nullptr,
+  IsolateData(v8::Isolate* isolate, size_t* start_idx,
+              uv_loop_t* event_loop, MultiIsolatePlatform* platform = nullptr,
               uint32_t* zero_fill_field = nullptr);
   ~IsolateData();
   inline uv_loop_t* event_loop() const;
@@ -359,23 +359,21 @@ class IsolateData {
 #define VP(PropertyName, StringValue) V(v8::Private, PropertyName)
 #define VS(PropertyName, StringValue) V(v8::String, PropertyName)
 #define V(TypeName, PropertyName)                                             \
-  inline v8::Local<TypeName> PropertyName(v8::Isolate* isolate) const;        \
-  inline void set_ ## PropertyName(v8::Isolate* isolate, v8::Local<TypeName> value);
+  inline v8::Local<TypeName> PropertyName(v8::Isolate* isolate) const;
   PER_ISOLATE_PRIVATE_SYMBOL_PROPERTIES(VP)
   PER_ISOLATE_STRING_PROPERTIES(VS)
 #undef V
 #undef VS
 #undef VP
 
-  std::unordered_map<nghttp2_rcbuf*, v8::Persistent<v8::String>> http2_static_strs;
+  std::unordered_map<nghttp2_rcbuf*, v8::Eternal<v8::String>> http2_static_strs;
   inline v8::Isolate* isolate() const;
-  void ResetAll();
 
  private:
 #define VP(PropertyName, StringValue) V(v8::Private, PropertyName)
 #define VS(PropertyName, StringValue) V(v8::String, PropertyName)
 #define V(TypeName, PropertyName)                                             \
-  v8::Persistent<TypeName> PropertyName ## _;
+  v8::Eternal<TypeName> PropertyName ## _;
   PER_ISOLATE_PRIVATE_SYMBOL_PROPERTIES(VP)
   PER_ISOLATE_STRING_PROPERTIES(VS)
 #undef V
@@ -416,7 +414,6 @@ class Environment {
     };
 
     AsyncHooks() = delete;
-    ~AsyncHooks();
 
     inline AliasedBuffer<uint32_t, v8::Uint32Array>& fields();
     inline int fields_count() const;
@@ -452,8 +449,12 @@ class Environment {
    private:
     friend class Environment;  // So we can call the constructor.
     inline explicit AsyncHooks(v8::Isolate* isolate);
+    inline explicit AsyncHooks(v8::Isolate* isolate,
+                               v8::Local<v8::Context> context,
+                               size_t* global_handle_start_idx,
+                               size_t* eternal_handle_start_idx);
     // Keep a list of all Persistent strings used for Provider types.
-    v8::Persistent<v8::String> providers_[AsyncWrap::PROVIDERS_LENGTH];
+    v8::Eternal<v8::String> providers_[AsyncWrap::PROVIDERS_LENGTH];
     // Used by provider_string().
     v8::Isolate* isolate_;
     // Stores the ids of the current execution context stack.
@@ -488,9 +489,12 @@ class Environment {
     inline uint32_t length() const;
     inline void set_index(uint32_t value);
 
+    inline ~TickInfo();
+
    private:
     friend class Environment;  // So we can call the constructor.
     inline TickInfo();
+    inline TickInfo(uint32_t* fields);
 
     enum Fields {
       kIndex,
@@ -498,7 +502,9 @@ class Environment {
       kFieldsCount
     };
 
-    uint32_t fields_[kFieldsCount];
+    // uint32_t fields_[kFieldsCount];
+    bool own_;
+    uint32_t* fields_;
 
     DISALLOW_COPY_AND_ASSIGN(TickInfo);
   };
@@ -533,7 +539,8 @@ class Environment {
       const v8::PropertyCallbackInfo<T>& info);
 
   inline Environment(IsolateData* isolate_data, v8::Local<v8::Context> context);
-  Environment(IsolateData* isolate_data, v8::Local<v8::Context> context, v8::Local<v8::Object> persistent_list);
+  Environment(IsolateData* isolate_data, v8::Local<v8::Context> context,
+                     size_t* global_handle_start_idx, size_t* eternal_handle_start_idx);
   inline ~Environment();
 
   void Start(int argc,
@@ -677,6 +684,9 @@ class Environment {
   ENVIRONMENT_STRONG_PERSISTENT_PROPERTIES(V)
 #undef V
 
+  inline v8::Local<v8::External> as_external() const;
+  inline void set_as_external(v8::Local<v8::External> value);
+
 #if HAVE_INSPECTOR
   inline inspector::Agent* inspector_agent() const {
     return inspector_agent_.get();
@@ -711,6 +721,13 @@ class Environment {
   uv_idle_t immediate_idle_handle_;
   uv_prepare_t idle_prepare_handle_;
   uv_check_t idle_check_handle_;
+
+#define V(PropertyName, TypeName)                                             \
+  v8::Persistent<TypeName> PropertyName ## _;
+  ENVIRONMENT_STRONG_PERSISTENT_PROPERTIES(V)
+#undef V
+
+  v8::Persistent<v8::External> as_external_;
 
   AsyncHooks async_hooks_;
   TickInfo tick_info_;
@@ -770,11 +787,6 @@ class Environment {
   static void EnvPromiseHook(v8::PromiseHookType type,
                              v8::Local<v8::Promise> promise,
                              v8::Local<v8::Value> parent);
-
-#define V(PropertyName, TypeName)                                             \
-  v8::Persistent<TypeName> PropertyName ## _;
-  ENVIRONMENT_STRONG_PERSISTENT_PROPERTIES(V)
-#undef V
 
   DISALLOW_COPY_AND_ASSIGN(Environment);
 };

@@ -162,6 +162,7 @@ using v8::Boolean;
 using v8::Context;
 using v8::EscapableHandleScope;
 using v8::Exception;
+using v8::External;
 using v8::Float64Array;
 using v8::Function;
 using v8::FunctionCallbackInfo;
@@ -179,6 +180,8 @@ using v8::Null;
 using v8::Number;
 using v8::Object;
 using v8::ObjectTemplate;
+using v8::Primitive;
+using v8::Private;
 using v8::Promise;
 using v8::PromiseRejectMessage;
 using v8::PropertyCallbackInfo;
@@ -994,6 +997,7 @@ void SetupNextTick(const FunctionCallbackInfo<Value>& args) {
 
   Local<ArrayBuffer> array_buffer =
       ArrayBuffer::New(env->isolate(), fields, sizeof(*fields) * fields_count);
+  env->set_tick_info_array_buffer(array_buffer);
 
   args.GetReturnValue().Set(Uint32Array::New(array_buffer, 0, fields_count));
 }
@@ -3008,6 +3012,7 @@ void StopProfilerIdleNotifier(const FunctionCallbackInfo<Value>& args) {
   env->StopProfilerIdleNotifier();
 }
 
+}  // anonymous namespace
 
 #define READONLY_PROPERTY(obj, str, var)                                      \
   do {                                                                        \
@@ -3026,8 +3031,6 @@ void StopProfilerIdleNotifier(const FunctionCallbackInfo<Value>& args) {
                                                               v8::DontEnum))  \
         .FromJust();                                                          \
   } while (0)
-
-}  // anonymous namespace
 
 void SetupProcessObject(Environment* env,
                         int argc,
@@ -4353,71 +4356,6 @@ static v8::StartupData SerializeInternalFields(Local<Object> holder, int index, 
   }
 }
 
-static void BackupGetter(Environment* env,
-                         Local<Context> context,
-                         Local<Object> snapshot_internal,
-                         const char* getter_name) {
-  Isolate* isolate = env->isolate();
-  Local<Object> desc = context->Global()
-    ->GetOwnPropertyDescriptor(context, OneByteString(isolate, getter_name))
-    .ToLocalChecked().As<Object>();
-  Local<Function> getter = desc->Get(context, OneByteString(isolate, "get"))
-    .ToLocalChecked().As<Function>();
-  READONLY_DONT_ENUM_PROPERTY(snapshot_internal, getter_name, getter);
-}
-
-static Local<Object> SetupSnapshotInternalObject(Environment* env, Local<Function> startup) {
-  Isolate* isolate = env->isolate();
-  EscapableHandleScope scope(isolate);
-  Local<Context> context = env->context();
-  Local<Object> snapshot_internal = Object::New(isolate);
-  Local<Array> persistent_list = Array::New(isolate);
-  Local<Array> eternal_list = Array::New(isolate);
-
-  // both startup serializer and partial serializer will visit env->as-external
-  // isolate->heap->roots->noscript_shared_function_infos
-  // ->get_api_func_data->call_code
-  env->set_as_external(Local<v8::External>());
-  uint32_t idx = 0;
-
-#define V(PropertyName, TypeName)                                              \
-  if (env->PropertyName().IsEmpty()) {                                         \
-    CHECK(persistent_list->Set(context, idx++, Undefined(isolate)).IsJust());  \
-  } else {                                                                     \
-    CHECK(persistent_list->Set(context, idx++,                                 \
-          Local<Value>::Cast(env->PropertyName())).IsJust());                  \
-  }
-  ENVIRONMENT_STRONG_PERSISTENT_PROPERTIES(V)
-#undef V
-
-  idx = 0;
-
-#define VP(PropertyName, StringValue) V(v8::Private, PropertyName)
-#define VS(PropertyName, StringValue) V(v8::String, PropertyName)
-#define V(TypeName, PropertyName)                                              \
-  if (env->PropertyName().IsEmpty()) {                                         \
-    CHECK(eternal_list->Set(context, idx++, Undefined(isolate)).IsJust());     \
-  } else {                                                                     \
-    CHECK(eternal_list->Set(context, idx++,                                    \
-          Local<Value>::Cast(env->PropertyName())).IsJust());                  \
-    env->isolate_data()->set_ ## PropertyName(isolate, Local<TypeName>());     \
-  }
-  PER_ISOLATE_PRIVATE_SYMBOL_PROPERTIES(VP)
-  PER_ISOLATE_STRING_PROPERTIES(VS)
-#undef V
-#undef VS
-#undef VP
-
-  READONLY_DONT_ENUM_PROPERTY(snapshot_internal, "_persistent_list", persistent_list);
-  READONLY_DONT_ENUM_PROPERTY(snapshot_internal, "_eternal_list", eternal_list);
-  READONLY_DONT_ENUM_PROPERTY(snapshot_internal, "_startup", startup);
-
-  // backup getter, accessors of global is ignored while deserializing global object in v8
-  // BackupGetter(env, context, snapshot_internal, "console");
-
-  return scope.Escape(snapshot_internal);
-}
-
 Local<Context> NewContext(Isolate* isolate,
                           Local<ObjectTemplate> object_template) {
   auto context = Context::New(isolate, nullptr, object_template);
@@ -4434,32 +4372,78 @@ Local<Context> NewContext(Isolate* isolate,
   return context;
 }
 
-static Local<Context> CreateNodeContext(int argc, const char* const* argv,
+static Local<Context> CreateNodeContext(IsolateData* isolate_data,
+                 int argc, const char* const* argv,
                  int exec_argc, const char* const* exec_argv,
                  Isolate* isolate, uint8_t* env_addr) {
-  ArrayBufferAllocator allocator;
   isolate->AddMessageListener(OnMessage);
-
   EscapableHandleScope handle_scope(isolate);
-  IsolateData isolate_data(
-      isolate,
-      uv_default_loop(),
-      v8_platform.Platform(),
-      allocator.zero_fill_field());
-
   Local<Context> context = NewContext(isolate);
   {
     Context::Scope context_scope(context);
-    Environment *env = new (env_addr) Environment(&isolate_data, context);
+    Environment *env = new (env_addr) Environment(isolate_data, context);
     env->Start(argc, argv, exec_argc, exec_argv, v8_is_profiling);
     Local<Function> startup = BootStrap(env);
-    Local<Object> internal_obj = SetupSnapshotInternalObject(env, startup);
-    READONLY_DONT_ENUM_PROPERTY(context->Global(), "_snapshot_internal", internal_obj);
-
-    delete env;
+    env->set_process_entry(startup);
   }
 
   return handle_scope.Escape(context);
+}
+
+static void AddGlobalHandles(Environment* env,
+                             SnapshotCreator* creator,
+                             size_t ctx_idx) {
+  Isolate* isolate = creator->GetIsolate();
+  AsyncHooks* async_hooks = env->async_hooks();
+  Local<Primitive> undefined = Undefined(isolate);
+
+// IsolateData
+#define VP(PropertyName, StringValue) V(Private, PropertyName)
+#define VS(PropertyName, StringValue) V(String, PropertyName)
+#define V(TypeName, PropertyName)                                             \
+  {                                                                           \
+    Local<TypeName> p = env->PropertyName();                                  \
+    creator->AddEternalHandle(p);                                             \
+  }
+  PER_ISOLATE_PRIVATE_SYMBOL_PROPERTIES(VP)
+  PER_ISOLATE_STRING_PROPERTIES(VS)
+#undef V
+#undef VS
+#undef VP
+
+// Environment::AsyncHooks::provides_
+  for (int i = 0; i < AsyncWrap::PROVIDERS_LENGTH; ++i) {
+    Local<String> s = async_hooks->provider_string(i);
+    creator->AddEternalHandle(s);
+  }
+
+// Environment Context Aware
+#define V(PropertyName, TypeName)                                             \
+  {                                                                           \
+    Local<TypeName> p = env->PropertyName();                                  \
+    if (p.IsEmpty()) {                                                        \
+      env->set_ ## PropertyName(                                              \
+          *(reinterpret_cast<Local<TypeName>*>(&undefined)));                 \
+      creator->AddContextAwareGlobalHandle(undefined, ctx_idx);               \
+    } else {                                                                  \
+      creator->AddContextAwareGlobalHandle(                                   \
+          *(reinterpret_cast<Local<Value>*>(&p)), ctx_idx);                   \
+    }                                                                         \
+  }
+  ENVIRONMENT_STRONG_PERSISTENT_PROPERTIES(V)
+#undef V
+
+  {
+    Local<External> as_external = env->as_external();
+    creator->AddGlobalHandle(*(reinterpret_cast<Local<Value>*>(&as_external)));
+  }
+
+  creator->AddContextAwareGlobalHandle(async_hooks->fields().GetJSArray(),
+                                       ctx_idx);
+  creator->AddContextAwareGlobalHandle(async_hooks->async_id_fields().GetJSArray(),
+                                       ctx_idx);
+  creator->AddContextAwareGlobalHandle(env->scheduled_immediate_count().GetJSArray(),
+                                       ctx_idx);
 }
 
 static void MkSnapshot(int argc, const char* const* argv,
@@ -4469,6 +4453,7 @@ static void MkSnapshot(int argc, const char* const* argv,
   InitExternalReferences(&reg, env_addr);
   intptr_t* external_references = reg.external_references();
 
+  ArrayBufferAllocator allocator;
   SnapshotCreator creator(external_references);
   Isolate* isolate = creator.GetIsolate();
   {
@@ -4479,20 +4464,28 @@ static void MkSnapshot(int argc, const char* const* argv,
 
   {
     HandleScope handle_scope(isolate);
-    Local<Context> node_ctx = CreateNodeContext(argc, argv, exec_argc,
+    IsolateData isolate_data(isolate,
+                              uv_default_loop(),
+                              v8_platform.Platform(),
+                              allocator.zero_fill_field());
+
+    Local<Context> node_ctx = CreateNodeContext(&isolate_data, argc, argv, exec_argc,
                                                 exec_argv, isolate, env_addr);
-    creator.AddContext(node_ctx,
+    size_t ctx_idx = creator.AddContext(node_ctx,
         v8::SerializeInternalFieldsCallback(SerializeInternalFields, env_addr));
+    AddGlobalHandles(reinterpret_cast<Environment*> (env_addr), &creator, ctx_idx);
   }
 
+  StartupData startup = creator.CreateBlob(SnapshotCreator::FunctionCodeHandling::kClear);
   {
-    StartupData startup = creator.CreateBlob(SnapshotCreator::FunctionCodeHandling::kClear);
     SnapshotWriter writer;
     if (v8::internal::FLAG_startup_src) writer.SetSnapshotFile(v8::internal::FLAG_startup_src);
     if (v8::internal::FLAG_startup_blob) writer.SetStartupBlobFile(v8::internal::FLAG_startup_blob);
     writer.WriteSnapshot(startup);
-    delete startup.data;
   }
+
+  delete startup.data;
+  delete (reinterpret_cast<Environment*> (env_addr));
 }
 
 int Start(int argc, char** argv) {

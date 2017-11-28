@@ -65,52 +65,33 @@ IsolateData::IsolateData(Isolate* isolate,
 }
 
 IsolateData::IsolateData(Isolate* isolate,
-                         v8::Local<v8::Context> context,
-                         v8::Local<v8::Object> eternal_list,
+                         size_t* start_idx,
                          uv_loop_t* event_loop,
                          MultiIsolatePlatform* platform,
                          uint32_t* zero_fill_field) :
+ #define V(PropertyName, StringValue)                                         \
+    PropertyName ## _(                                                        \
+        isolate,                                                              \
+        v8::Eternal<Private>::GetFromSnapshot(isolate, (*start_idx)++)),
+  PER_ISOLATE_PRIVATE_SYMBOL_PROPERTIES(V)
+#undef V
+#define V(PropertyName, StringValue)                                          \
+    PropertyName ## _(                                                        \
+        isolate,                                                              \
+        v8::Eternal<String>::GetFromSnapshot(isolate, (*start_idx)++)),
+    PER_ISOLATE_STRING_PROPERTIES(V)
+#undef V
     isolate_(isolate),
     event_loop_(event_loop),
     zero_fill_field_(zero_fill_field),
     platform_(platform) {
-  HandleScope handle_scope(isolate);
-  uint32_t idx = 0;
-#define VP(PropertyName, StringValue) V(v8::Private, PropertyName)
-#define VS(PropertyName, StringValue) V(v8::String, PropertyName)
-#define V(TypeName, PropertyName)                                                 \
-  {                                                                               \
-    v8::Local<v8::Value> q = eternal_list->Get(context, idx++).ToLocalChecked();  \
-    v8::Local<TypeName> p = *(reinterpret_cast<v8::Local<TypeName>*> (&q));       \
-    set_ ## PropertyName(isolate, p);                                             \
-  }
-  PER_ISOLATE_PRIVATE_SYMBOL_PROPERTIES(VP)
-  PER_ISOLATE_STRING_PROPERTIES(VS)
-#undef V
-#undef VS
-#undef VP
-
   if (platform_ != nullptr)
     platform_->RegisterIsolate(this, event_loop);
-
 }
 
 IsolateData::~IsolateData() {
-  ResetAll();
   if (platform_ != nullptr)
     platform_->UnregisterIsolate(this);
-}
-
-void IsolateData::ResetAll() {
-#define VP(PropertyName, StringValue) V(v8::Private, PropertyName)
-#define VS(PropertyName, StringValue) V(v8::String, PropertyName)
-#define V(TypeName, PropertyName)                                             \
-  PropertyName ## _.Reset();
-  PER_ISOLATE_PRIVATE_SYMBOL_PROPERTIES(VP)
-  PER_ISOLATE_STRING_PROPERTIES(VS)
-#undef V
-#undef VS
-#undef VP
 }
 
 void Environment::Start(int argc,
@@ -182,10 +163,23 @@ void Environment::Start(int argc,
 
 Environment::Environment(IsolateData* isolate_data,
                         v8::Local<v8::Context> context,
-                        v8::Local<v8::Object> persistent_list)
+                        size_t* global_handle_start_idx,
+                        size_t* eternal_handle_start_idx)
     : isolate_(context->GetIsolate()),
       isolate_data_(isolate_data),
-      async_hooks_(context->GetIsolate()),
+#define V(PropertyName, TypeName)                                             \
+  PropertyName ## _(                                                          \
+      context->GetIsolate(),                                                  \
+      v8::Persistent<TypeName>::GetFromSnapshot(context->GetIsolate(),        \
+                                                context,                      \
+                                                (*global_handle_start_idx)++)),
+  ENVIRONMENT_STRONG_PERSISTENT_PROPERTIES(V)
+#undef V
+      async_hooks_(context->GetIsolate(),
+                   context,
+                   global_handle_start_idx,
+                   eternal_handle_start_idx),
+      tick_info_(reinterpret_cast<uint32_t*> (tick_info_array_buffer()->GetContents().Data())),
       timer_base_(uv_now(isolate_data->event_loop())),
       using_domains_(false),
       printed_error_(false),
@@ -193,7 +187,10 @@ Environment::Environment(IsolateData* isolate_data,
       abort_on_uncaught_exception_(false),
       emit_napi_warning_(true),
       makecallback_cntr_(0),
-      scheduled_immediate_count_(isolate_, 1),
+      scheduled_immediate_count_(context->GetIsolate(),
+                                 v8::Global<v8::Uint32Array>
+                                 ::GetFromSnapshot(context->GetIsolate(), context,
+                                                   (*global_handle_start_idx)++)),
 #if HAVE_INSPECTOR
       inspector_agent_(new inspector::Agent(this)),
 #endif
@@ -204,23 +201,8 @@ Environment::Environment(IsolateData* isolate_data,
   v8::HandleScope handle_scope(isolate());
   v8::Context::Scope context_scope(context);
 
-
-  // FIXME
-  // async_hooks_(context->GetIsolate()),
-  // scheduled_immediate_count_(isolate_, 1),
-
-  // FIXME
   AssignToContext(context);
 
-  uint32_t idx = 0;
-#define V(PropertyName, TypeName)                                              \
-  {                                                                            \
-    v8::Local<v8::Value> q = persistent_list->Get(context, idx++).ToLocalChecked();    \
-    v8::Local<TypeName> p = *(reinterpret_cast<v8::Local<TypeName>*> (&q));            \
-    set_ ## PropertyName(p);                                                   \
-  }
-  ENVIRONMENT_STRONG_PERSISTENT_PROPERTIES(V)
-#undef V
   set_as_external(v8::External::New(isolate(), this));
 
   destroy_async_id_list_.reserve(512);

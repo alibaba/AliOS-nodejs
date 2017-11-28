@@ -2955,6 +2955,7 @@ void StopProfilerIdleNotifier(const FunctionCallbackInfo<Value>& args) {
   env->StopProfilerIdleNotifier();
 }
 
+}  // anonymous namespace
 
 #define READONLY_PROPERTY(obj, str, var)                                      \
   do {                                                                        \
@@ -2973,8 +2974,6 @@ void StopProfilerIdleNotifier(const FunctionCallbackInfo<Value>& args) {
                                                               v8::DontEnum))  \
         .FromJust();                                                          \
   } while (0)
-
-}  // anonymous namespace
 
 void SetupProcessObject(Environment* env,
                         int argc,
@@ -3608,12 +3607,10 @@ void LoadEnvironment(Environment* env) {
     env->async_hooks()->clear_async_id_stack();
 }
 
-void RunEntry(Environment* env, Local<Function> startup) {
+void RunEntry(Environment* env) {
   HandleScope handle_scope(env->isolate());
 
   TryCatch try_catch(env->isolate());
-
-  Local<Context> context = env->context();
 
   // Add a reference to the global object
   Local<Object> global = env->context()->Global();
@@ -3647,7 +3644,7 @@ void RunEntry(Environment* env, Local<Function> startup) {
   // like Node's I/O bindings may want to replace 'f' with their own function.
   Local<Value> arg = env->process_object();
 
-  auto ret = startup->Call(env->context(), Null(env->isolate()), 1, &arg);
+  auto ret = env->process_entry()->Call(env->context(), Null(env->isolate()), 1, &arg);
   // If there was an error during bootstrap then it was either handled by the
   // FatalException handler or it's unrecoverable (e.g. max call stack
   // exceeded). Either way, clear the stack so that the AsyncCallbackScope
@@ -4754,24 +4751,15 @@ inline int StartFromSnapshot(Isolate* isolate, uint8_t* env_addr, uv_loop_t* eve
       v8::DeserializeInternalFieldsCallback(DeserializeInternalFields))
       .ToLocalChecked();
   Context::Scope context_scope(context);
-  Local<Object> global = context->Global();
-  Local<Object> snapshot_internal =
-    global->Get(context, OneByteString(isolate, "_snapshot_internal"))
-    .ToLocalChecked().As<Object>();
-  Local<Object> persistent_list =
-    snapshot_internal->Get(context, OneByteString(isolate, "_persistent_list"))
-    .ToLocalChecked().As<Object>();
-  Local<Object> eternal_list =
-    snapshot_internal->Get(context, OneByteString(isolate, "_eternal_list"))
-    .ToLocalChecked().As<Object>();
-  Local<Function> startup =
-    snapshot_internal->Get(context, OneByteString(isolate,"_startup"))
-    .ToLocalChecked().As<Function>();
 
-  IsolateData isolate_data(isolate, context, eternal_list,
-                           event_loop, platform, zero_fill_field);
+  size_t global_handle_start_idx = 0;
+  size_t eternal_handle_start_idx = 0;
+  IsolateData isolate_data(isolate, &eternal_handle_start_idx, event_loop, platform, zero_fill_field);
 
-  Environment* env = new (env_addr) Environment(&isolate_data, context, persistent_list);
+  Environment* env = new (env_addr) Environment(&isolate_data,
+                                                 context,
+                                                 &global_handle_start_idx,
+                                                 &eternal_handle_start_idx);
   CHECK_EQ(0, uv_key_create(&thread_local_env));
   uv_key_set(&thread_local_env, env);
   StartEnvFromSnapshot(env, argc, argv, exec_argc, exec_argv, v8_is_profiling);
@@ -4791,7 +4779,7 @@ inline int StartFromSnapshot(Isolate* isolate, uint8_t* env_addr, uv_loop_t* eve
   {
     Environment::AsyncCallbackScope callback_scope(env);
     env->async_hooks()->push_async_ids(1, 0);
-    RunEntry(env, startup);
+    RunEntry(env);
     env->async_hooks()->pop_async_id(1);
   }
 

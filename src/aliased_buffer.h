@@ -88,6 +88,21 @@ class AliasedBuffer {
     js_array_ = v8::Global<V8T>(that.isolate_, that.GetJSArray());
   }
 
+  AliasedBuffer(v8::Isolate* isolate,
+                v8::Local<V8T> jsarray)
+      : isolate_(isolate),
+        count_(jsarray->Length()),
+        byte_offset_(jsarray->ByteOffset()),
+        js_array_(isolate, jsarray),
+        free_buffer_(false) {
+    const v8::HandleScope handle_scope(isolate_);
+    v8::Local<v8::ArrayBuffer> ab = jsarray->Buffer();
+    CHECK(ab->IsExternal());
+    v8::ArrayBuffer::Contents contents = ab->GetContents();
+    uint8_t* data = reinterpret_cast<uint8_t*> (contents.Data());
+    buffer_ = reinterpret_cast<NativeT*>(data + jsarray->ByteOffset());
+  }
+
   ~AliasedBuffer() {
     if (free_buffer_ && buffer_ != nullptr) {
       free(buffer_);

@@ -74,7 +74,7 @@ inline Environment::AsyncHooks::AsyncHooks(v8::Isolate* isolate)
   // an array so the array index matches the PROVIDER id offset. This way the
   // strings can be retrieved quickly.
 #define V(Provider)                                                           \
-  providers_[AsyncWrap::PROVIDER_ ## Provider].Reset(                         \
+  providers_[AsyncWrap::PROVIDER_ ## Provider].Set(                           \
       isolate_,                                                               \
       v8::String::NewFromOneByte(                                             \
         isolate_,                                                             \
@@ -85,9 +85,24 @@ inline Environment::AsyncHooks::AsyncHooks(v8::Isolate* isolate)
 #undef V
 }
 
-inline Environment::AsyncHooks::~AsyncHooks() {
+inline Environment::AsyncHooks::AsyncHooks(v8::Isolate* isolate,
+                                           v8::Local<v8::Context> context,
+                                           size_t* global_handle_start_idx,
+                                           size_t* eternal_handle_start_idx)
+    : isolate_(isolate),
+      fields_(isolate,
+              v8::Global<v8::Uint32Array>
+              ::GetFromSnapshot(isolate, context,
+                                (*global_handle_start_idx)++)),
+      async_id_fields_(isolate,
+                       v8::Global<v8::Float64Array>
+                       ::GetFromSnapshot(isolate, context,
+                                         (*global_handle_start_idx)++)) {
 #define V(Provider)                                                           \
-  providers_[AsyncWrap::PROVIDER_ ## Provider].Reset();
+  providers_[AsyncWrap::PROVIDER_ ## Provider].Set(                           \
+      isolate_,                                                               \
+      v8::Eternal<v8::String>::GetFromSnapshot(isolate,                       \
+                                               (*eternal_handle_start_idx)++));
   NODE_ASYNC_PROVIDER_TYPES(V)
 #undef V
 }
@@ -208,8 +223,22 @@ inline bool Environment::AsyncCallbackScope::in_makecallback() const {
 }
 
 inline Environment::TickInfo::TickInfo() {
-  for (int i = 0; i < kFieldsCount; ++i)
-    fields_[i] = 0;
+  fields_ = Calloc<uint32_t>(kFieldsCount);
+  own_ = true;
+}
+
+inline Environment::TickInfo::TickInfo(uint32_t* fields)
+       : own_(false),
+         fields_(fields) {}
+
+inline Environment::TickInfo::~TickInfo() {
+#if 0
+  if (own_) {
+    free(fields_);
+    fields_ = nullptr;
+    own_ = false;
+  }
+#endif
 }
 
 inline uint32_t* Environment::TickInfo::fields() {
@@ -266,6 +295,7 @@ inline Environment::Environment(IsolateData* isolate_data,
                                 v8::Local<v8::Context> context)
     : isolate_(context->GetIsolate()),
       isolate_data_(isolate_data),
+      context_(context->GetIsolate(), context),
       async_hooks_(context->GetIsolate()),
       timer_base_(uv_now(isolate_data->event_loop())),
       using_domains_(false),
@@ -280,8 +310,7 @@ inline Environment::Environment(IsolateData* isolate_data,
 #endif
       handle_cleanup_waiting_(0),
       http_parser_buffer_(nullptr),
-      fs_stats_field_array_(nullptr),
-      context_(context->GetIsolate(), context) {
+      fs_stats_field_array_(nullptr) {
   // We'll be creating new objects so make sure we've entered the context.
   v8::HandleScope handle_scope(isolate());
   v8::Context::Scope context_scope(context);
@@ -328,6 +357,8 @@ inline Environment::~Environment() {
 #define V(PropertyName, TypeName) PropertyName ## _.Reset();
   ENVIRONMENT_STRONG_PERSISTENT_PROPERTIES(V)
 #undef V
+
+  context_.Reset();
 
   delete[] heap_statistics_buffer_;
   delete[] heap_space_statistics_buffer_;
@@ -605,11 +636,6 @@ inline void Environment::SetTemplateMethod(v8::Local<v8::FunctionTemplate> that,
   v8::Local<TypeName> IsolateData::PropertyName(v8::Isolate* isolate) const { \
     /* Strings are immutable so casting away const-ness here is okay. */      \
     return const_cast<IsolateData*>(this)->PropertyName ## _.Get(isolate);    \
-  }                                                                           \
-  inline                                                                      \
-  void IsolateData::set_ ## PropertyName(v8::Isolate* isolate,               \
-                                          v8::Local<TypeName> value) {        \
-    PropertyName ## _.Reset(isolate, value);                                  \
   }
   PER_ISOLATE_PRIVATE_SYMBOL_PROPERTIES(VP)
   PER_ISOLATE_STRING_PROPERTIES(VS)
@@ -638,6 +664,13 @@ inline void Environment::SetTemplateMethod(v8::Local<v8::FunctionTemplate> that,
   }
   ENVIRONMENT_STRONG_PERSISTENT_PROPERTIES(V)
 #undef V
+
+  inline v8::Local<v8::External> Environment::as_external() const {
+    return StrongPersistentToLocal(as_external_);
+  }
+  inline void Environment::set_as_external(v8::Local<v8::External> value) {
+    as_external_.Reset(isolate(), value);
+  }
 
 }  // namespace node
 
