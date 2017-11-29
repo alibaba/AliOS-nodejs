@@ -294,12 +294,12 @@ class Local {
   V8_INLINE static Local<T> New(Isolate* isolate, Local<T> that);
   V8_INLINE static Local<T> New(Isolate* isolate,
                                 const PersistentBase<T>& that);
-
  private:
   friend class Utils;
   template<class F> friend class Eternal;
   template<class F> friend class PersistentBase;
   template<class F, class M> friend class Persistent;
+  template<class F> friend class Global;
   template<class F> friend class Local;
   template <class F>
   friend class MaybeLocal;
@@ -324,6 +324,17 @@ class Local {
 
   explicit V8_INLINE Local(T* that) : val_(that) {}
   V8_INLINE static Local<T> New(Isolate* isolate, T* that);
+  V8_INLINE static Local<T> NewPersistentFromSnapshot(Isolate* isolate,
+                                                      size_t index);
+  V8_INLINE static Local<T> NewPersistentFromSnapshot(Isolate* isolate,
+                                                      Local<Context> context,
+                                                      size_t index);
+  V8_INLINE static Local<T> NewEternalFromSnapshot(Isolate* isolate,
+                                                   size_t index);
+  V8_INLINE static Local<T> NewEternalFromSnapshot(Isolate* isolate,
+                                                   Local<Context> context,
+                                                   size_t index);
+
   T* val_;
 };
 
@@ -401,6 +412,16 @@ template <class T> class Eternal {
   V8_INLINE Local<T> Get(Isolate* isolate) const;
   V8_INLINE bool IsEmpty() const { return val_ == nullptr; }
   template<class S> V8_INLINE void Set(Isolate* isolate, Local<S> handle);
+
+  V8_INLINE static Local<T> GetFromSnapshot(Isolate* isolate,
+                                            size_t index) {
+    return Local<T>::NewEternalFromSnapshot(isolate, index);
+  }
+  V8_INLINE static Local<T> GetFromSnapshot(Isolate* isolate,
+                                            Local<Context> context,
+                                            size_t index) {
+    return Local<T>::NewEternalFromSnapshot(isolate, context, index);
+  }
 
  private:
   T* val_;
@@ -748,6 +769,15 @@ template <class T, class M> class Persistent : public PersistentBase<T> {
     return Persistent<S>::Cast(*this);
   }
 
+  V8_INLINE static Local<T> GetFromSnapshot(Isolate* isolate, size_t index) {
+    return Local<T>::NewPersistentFromSnapshot(isolate, index);
+  }
+  V8_INLINE static Local<T> GetFromSnapshot(Isolate* isolate,
+                                            Local<Context> context,
+                                            size_t index) {
+    return Local<T>::NewPersistentFromSnapshot(isolate, context, index);
+  }
+
  private:
   friend class Isolate;
   friend class Utils;
@@ -818,6 +848,16 @@ class Global : public PersistentBase<T> {
    * Pass allows returning uniques from functions, etc.
    */
   Global Pass() { return static_cast<Global&&>(*this); }  // NOLINT
+
+  V8_INLINE static Local<T> GetFromSnapshot(Isolate* isolate,
+                                            size_t index) {
+    return Local<T>::NewPersistentFromSnapshot(isolate, index);
+  }
+  V8_INLINE static Local<T> GetFromSnapshot(Isolate* isolate,
+                                            Local<Context> context,
+                                            size_t index) {
+    return Local<T>::NewPersistentFromSnapshot(isolate, context, index);
+  }
 
   /*
    * For compatibility with Chromium's base::Bind (base::Passed).
@@ -890,6 +930,18 @@ class V8_EXPORT HandleScope {
   // Uses heap_object to obtain the current Isolate.
   static internal::Object** CreateHandle(internal::HeapObject* heap_object,
                                          internal::Object* value);
+
+  enum class HandleKind {
+    kGlobal,
+    kEternal
+  };
+  static internal::Object** CreateHandleFromSnapshot(internal::Isolate* isolate,
+                                                     HandleKind kind,
+                                                     size_t index);
+  static internal::Object** CreateHandleFromSnapshot(internal::Isolate* isolate,
+                                                     Local<Context> context,
+                                                     HandleKind kind,
+                                                     size_t index);
 
   internal::Isolate* isolate_;
   internal::Object** prev_next_;
@@ -8230,6 +8282,14 @@ class V8_EXPORT SnapshotCreator {
    */
   size_t AddTemplate(Local<Template> template_obj);
 
+  size_t AddGlobalHandle(Local<Data> handle);
+  size_t AddContextAwareGlobalHandle(Local<Data> handle,
+                                     size_t ctx_idx);
+
+  size_t AddEternalHandle(Local<Data> handle);
+  size_t AddContextAwareEternalHandle(Local<Data> handle,
+                                      size_t ctx_idx);
+
   /**
    * Created a snapshot data blob.
    * This must not be called from within a handle scope.
@@ -9162,6 +9222,37 @@ Local<T> Local<T>::New(Isolate* isolate, T* that) {
       reinterpret_cast<internal::Isolate*>(isolate), *p)));
 }
 
+template <class T>
+Local<T> Local<T>::NewPersistentFromSnapshot(Isolate* isolate, size_t index) {
+  return Local<T>(reinterpret_cast<T*>(HandleScope::CreateHandleFromSnapshot(
+          reinterpret_cast<internal::Isolate*>(isolate),
+          HandleScope::HandleKind::kGlobal, index)));
+}
+
+template <class T>
+Local<T> Local<T>::NewPersistentFromSnapshot(Isolate* isolate,
+                                             Local<Context> context,
+                                             size_t index) {
+  return Local<T>(reinterpret_cast<T*>(HandleScope::CreateHandleFromSnapshot(
+          reinterpret_cast<internal::Isolate*>(isolate), context,
+          HandleScope::HandleKind::kGlobal, index)));
+}
+
+template <class T>
+Local<T> Local<T>::NewEternalFromSnapshot(Isolate* isolate, size_t index) {
+  return Local<T>(reinterpret_cast<T*>(HandleScope::CreateHandleFromSnapshot(
+          reinterpret_cast<internal::Isolate*>(isolate),
+          HandleScope::HandleKind::kEternal, index)));
+}
+
+template <class T>
+Local<T> Local<T>::NewEternalFromSnapshot(Isolate* isolate,
+                                          Local<Context> context,
+                                          size_t index) {
+  return Local<T>(reinterpret_cast<T*>(HandleScope::CreateHandleFromSnapshot(
+          reinterpret_cast<internal::Isolate*>(isolate), context,
+          HandleScope::HandleKind::kEternal, index)));
+}
 
 template<class T>
 template<class S>

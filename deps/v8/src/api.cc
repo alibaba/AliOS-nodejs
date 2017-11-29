@@ -545,7 +545,20 @@ struct SnapshotCreatorData {
         default_context_(),
         contexts_(isolate),
         templates_(isolate),
+        global_handles_(isolate),
+        eternal_handles_(isolate),
+        num_global_handles_(0),
+        num_eternal_handles_(0),
         created_(false) {}
+
+  ~SnapshotCreatorData() {
+    std::for_each(context_aware_global_handles_.begin(),
+                context_aware_global_handles_.end(),
+                [](PersistentValueVector<Data>* handles) { delete handles; });
+    std::for_each(context_aware_eternal_handles_.begin(),
+                context_aware_eternal_handles_.end(),
+                [](PersistentValueVector<Data>* handles) { delete handles; });
+  }
 
   static SnapshotCreatorData* cast(void* data) {
     return reinterpret_cast<SnapshotCreatorData*>(data);
@@ -557,7 +570,13 @@ struct SnapshotCreatorData {
   SerializeInternalFieldsCallback default_embedder_fields_serializer_;
   PersistentValueVector<Context> contexts_;
   PersistentValueVector<Template> templates_;
+  PersistentValueVector<Data> global_handles_;
+  PersistentValueVector<Data> eternal_handles_;
+  std::vector<PersistentValueVector<Data>*> context_aware_global_handles_;
+  std::vector<PersistentValueVector<Data>*> context_aware_eternal_handles_;
   std::vector<SerializeInternalFieldsCallback> embedder_fields_serializers_;
+  size_t num_global_handles_;
+  size_t num_eternal_handles_;
   bool created_;
 };
 
@@ -617,8 +636,14 @@ size_t SnapshotCreator::AddContext(Local<Context> context,
   Isolate* isolate = data->isolate_;
   CHECK_EQ(isolate, context->GetIsolate());
   size_t index = static_cast<int>(data->contexts_.Size());
+  DCHECK_EQ(index, data->context_aware_global_handles_.size());
+  DCHECK_EQ(index, data->context_aware_eternal_handles_.size());
+
   data->contexts_.Append(context);
   data->embedder_fields_serializers_.push_back(callback);
+
+  data->context_aware_global_handles_.push_back(new PersistentValueVector<Data>(isolate));
+  data->context_aware_eternal_handles_.push_back(new PersistentValueVector<Data>(isolate));
   return index;
 }
 
@@ -633,6 +658,84 @@ size_t SnapshotCreator::AddTemplate(Local<Template> template_obj) {
   return index;
 }
 
+size_t SnapshotCreator::AddGlobalHandle(Local<Data> handle) {
+  DCHECK(!handle.IsEmpty());
+  SnapshotCreatorData* data = SnapshotCreatorData::cast(data_);
+  DCHECK(!data->created_);
+#ifdef DEBUG
+  i::Handle<i::Object> obj = Utils::OpenHandle(*handle);
+  if (obj->IsHeapObject()) {
+    i::Handle<i::HeapObject> heap_obj = i::Handle<i::HeapObject>::cast(obj);
+    DCHECK_EQ(reinterpret_cast<i::Isolate*>(data->isolate_),
+              heap_obj->GetIsolate());
+  }
+#endif
+  size_t index = static_cast<int>(data->global_handles_.Size());
+  data->global_handles_.Append(handle);
+  ++data->num_global_handles_;
+  return index;
+}
+
+size_t SnapshotCreator::AddContextAwareGlobalHandle(Local<Data> handle,
+                                                    size_t ctx_idx) {
+  DCHECK(!handle.IsEmpty());
+  SnapshotCreatorData* data = SnapshotCreatorData::cast(data_);
+  DCHECK_LT(ctx_idx, data->context_aware_global_handles_.size());
+  DCHECK(!data->created_);
+#ifdef DEBUG
+  i::Handle<i::Object> obj = Utils::OpenHandle(*handle);
+  if (obj->IsHeapObject()) {
+    i::Handle<i::HeapObject> heap_obj = i::Handle<i::HeapObject>::cast(obj);
+    DCHECK_EQ(reinterpret_cast<i::Isolate*>(data->isolate_),
+              heap_obj->GetIsolate());
+  }
+#endif
+  PersistentValueVector<Data>* handles = data->context_aware_global_handles_[ctx_idx];
+  size_t index = static_cast<int>(handles->Size());
+  handles->Append(handle);
+  ++data->num_global_handles_;
+  return index;
+}
+
+size_t SnapshotCreator::AddEternalHandle(Local<Data> handle) {
+  DCHECK(!handle.IsEmpty());
+  SnapshotCreatorData* data = SnapshotCreatorData::cast(data_);
+  DCHECK(!data->created_);
+#ifdef DEBUG
+  i::Handle<i::Object> obj = Utils::OpenHandle(*handle);
+  if (obj->IsHeapObject()) {
+    i::Handle<i::HeapObject> heap_obj = i::Handle<i::HeapObject>::cast(obj);
+    DCHECK_EQ(reinterpret_cast<i::Isolate*>(data->isolate_),
+              heap_obj->GetIsolate());
+  }
+#endif
+  size_t index = static_cast<int>(data->eternal_handles_.Size());
+  data->eternal_handles_.Append(handle);
+  ++data->num_eternal_handles_;
+  return index;
+}
+
+size_t SnapshotCreator::AddContextAwareEternalHandle(Local<Data> handle,
+                                                     size_t ctx_idx) {
+  DCHECK(!handle.IsEmpty());
+  SnapshotCreatorData* data = SnapshotCreatorData::cast(data_);
+  DCHECK_LT(ctx_idx, data->context_aware_eternal_handles_.size());
+  DCHECK(!data->created_);
+#ifdef DEBUG
+  i::Handle<i::Object> obj = Utils::OpenHandle(*handle);
+  if (obj->IsHeapObject()) {
+    i::Handle<i::HeapObject> heap_obj = i::Handle<i::HeapObject>::cast(obj);
+    DCHECK_EQ(reinterpret_cast<i::Isolate*>(data->isolate_),
+              heap_obj->GetIsolate());
+  }
+#endif
+  PersistentValueVector<Data>* handles = data->context_aware_eternal_handles_[ctx_idx];
+  size_t index = static_cast<int>(handles->Size());
+  handles->Append(handle);
+  ++data->num_eternal_handles_;
+  return index;
+}
+
 StartupData SnapshotCreator::CreateBlob(
     SnapshotCreator::FunctionCodeHandling function_code_handling) {
   SnapshotCreatorData* data = SnapshotCreatorData::cast(data_);
@@ -644,6 +747,8 @@ StartupData SnapshotCreator::CreateBlob(
 
   {
     int num_templates = static_cast<int>(data->templates_.Size());
+    int num_global_handles = static_cast<int>(data->global_handles_.Size());
+    int num_eternal_handles = static_cast<int>(data->eternal_handles_.Size());
     i::HandleScope scope(isolate);
     i::Handle<i::FixedArray> templates =
         isolate->factory()->NewFixedArray(num_templates, i::TENURED);
@@ -652,6 +757,22 @@ StartupData SnapshotCreator::CreateBlob(
     }
     isolate->heap()->SetSerializedTemplates(*templates);
     data->templates_.Clear();
+
+    i::Handle<i::FixedArray> global_handles =
+        isolate->factory()->NewFixedArray(num_global_handles, i::TENURED);
+    for (int i = 0; i < num_global_handles; i++) {
+      global_handles->set(i, *v8::Utils::OpenHandle(*data->global_handles_.Get(i)));
+    }
+    isolate->heap()->SetSerializedGlobalHandles(*global_handles);
+    data->global_handles_.Clear();
+
+    i::Handle<i::FixedArray> eternal_handles =
+        isolate->factory()->NewFixedArray(num_eternal_handles, i::TENURED);
+    for (int i = 0; i < num_eternal_handles; i++) {
+      eternal_handles->set(i, *v8::Utils::OpenHandle(*data->eternal_handles_.Get(i)));
+    }
+    isolate->heap()->SetSerializedEternalHandles(*eternal_handles);
+    data->eternal_handles_.Clear();
 
     // We need to store the global proxy size upfront in case we need the
     // bootstrapper to create a global proxy before we deserialize the context.
@@ -662,6 +783,29 @@ StartupData SnapshotCreator::CreateBlob(
           v8::Utils::OpenHandle(*data->contexts_.Get(i));
       global_proxy_sizes->set(i,
                               i::Smi::FromInt(context->global_proxy()->Size()));
+
+      {
+        PersistentValueVector<Data>* vec = data->context_aware_global_handles_[i];
+        int num_handles = static_cast<int>(vec->Size());
+        i::Handle<i::FixedArray> handles =
+          isolate->factory()->NewFixedArray(num_handles, i::TENURED);
+        for (int j = 0; j < num_handles; ++j) {
+          handles->set(j, *v8::Utils::OpenHandle(*vec->Get(j)));
+        }
+        context->set_serialized_global_handles(*handles);
+        vec->Clear();
+      }
+      {
+        PersistentValueVector<Data>* vec = data->context_aware_eternal_handles_[i];
+        int num_handles = static_cast<int>(vec->Size());
+        i::Handle<i::FixedArray> handles =
+          isolate->factory()->NewFixedArray(num_handles, i::TENURED);
+        for (int j = 0; j < num_handles; ++j) {
+          handles->set(j, *v8::Utils::OpenHandle(*vec->Get(j)));
+        }
+        context->set_serialized_eternal_handles(*handles);
+        vec->Clear();
+      }
     }
     isolate->heap()->SetSerializedGlobalProxySizes(*global_proxy_sizes);
   }
@@ -701,7 +845,8 @@ StartupData SnapshotCreator::CreateBlob(
   }
 
   i::StartupSerializer startup_serializer(isolate, function_code_handling);
-  startup_serializer.SerializeStrongReferences();
+  startup_serializer.SerializeStrongReferences(data->num_global_handles_,
+                                               data->num_eternal_handles_);
 
   // Serialize each context with a new partial serializer.
   std::vector<i::SnapshotData*> context_snapshots;
@@ -1060,6 +1205,50 @@ i::Object** HandleScope::CreateHandle(i::HeapObject* heap_object,
   return i::HandleScope::CreateHandle(heap_object->GetIsolate(), value);
 }
 
+
+i::Object** HandleScope::CreateHandleFromSnapshot(internal::Isolate* isolate,
+                                                  HandleKind kind,
+                                                  size_t index) {
+  i::FixedArray* handles;
+  if (kind == HandleKind::kGlobal) {
+    handles = isolate->heap()->serialized_global_handles();
+  } else if (kind == HandleKind::kEternal) {
+    handles = isolate->heap()->serialized_eternal_handles();
+  } else {
+    UNREACHABLE();
+  }
+
+  int int_index = static_cast<int>(index);
+  if (int_index < handles->length()) {
+    i::Object* value = handles->get(int_index);
+    handles->set_undefined(int_index);
+    return i::HandleScope::CreateHandle(isolate, value);
+  }
+  return NULL;
+}
+
+i::Object** HandleScope::CreateHandleFromSnapshot(internal::Isolate* isolate,
+                                                  Local<Context> context,
+                                                  HandleKind kind,
+                                                  size_t index) {
+  i::Handle<i::Context> env = Utils::OpenHandle(*context);
+  i::FixedArray* handles;
+  if (kind == HandleKind::kGlobal) {
+    handles = env->serialized_global_handles();
+  } else if (kind == HandleKind::kEternal) {
+    handles = env->serialized_eternal_handles();
+  } else {
+    UNREACHABLE();
+  }
+
+  int int_index = static_cast<int>(index);
+  if (int_index < handles->length()) {
+    i::Object* value = handles->get(int_index);
+    handles->set_undefined(int_index);
+    return i::HandleScope::CreateHandle(isolate, value);
+  }
+  return NULL;
+}
 
 EscapableHandleScope::EscapableHandleScope(Isolate* v8_isolate) {
   i::Isolate* isolate = reinterpret_cast<i::Isolate*>(v8_isolate);

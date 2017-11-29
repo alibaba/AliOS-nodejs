@@ -274,6 +274,10 @@ void ObjectStatsCollector::CollectGlobalStatistics() {
                          WEAK_NEW_SPACE_OBJECT_TO_CODE_SUB_TYPE, 0);
   RecordFixedArrayHelper(nullptr, heap_->serialized_templates(),
                          SERIALIZED_TEMPLATES_SUB_TYPE, 0);
+  RecordFixedArrayHelper(nullptr, heap_->serialized_global_handles(),
+                         SERIALIZED_GLOBAL_HANDLES_SUB_TYPE, 0);
+  RecordFixedArrayHelper(nullptr, heap_->serialized_eternal_handles(),
+                         SERIALIZED_ETERNAL_HANDLES_SUB_TYPE, 0);
   RecordFixedArrayHelper(nullptr, heap_->number_string_cache(),
                          NUMBER_STRING_CACHE_SUB_TYPE, 0);
   RecordFixedArrayHelper(nullptr, heap_->single_character_string_cache(),

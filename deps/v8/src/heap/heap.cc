@@ -3045,6 +3045,8 @@ void Heap::CreateInitialObjects() {
 
   set_serialized_templates(empty_fixed_array());
   set_serialized_global_proxy_sizes(empty_fixed_array());
+  set_serialized_global_handles(empty_fixed_array());
+  set_serialized_eternal_handles(empty_fixed_array());
 
   set_weak_stack_trace_list(Smi::kZero);
 
@@ -3113,6 +3115,8 @@ bool Heap::RootCanBeWrittenAfterInitialization(Heap::RootListIndex root_index) {
     case kWeakStackTraceListRootIndex:
     case kSerializedTemplatesRootIndex:
     case kSerializedGlobalProxySizesRootIndex:
+    case kSerializedGlobalHandlesRootIndex:
+    case kSerializedEternalHandlesRootIndex:
     case kPublicSymbolTableRootIndex:
     case kApiSymbolTableRootIndex:
     case kApiPrivateSymbolTableRootIndex:
@@ -5389,6 +5393,8 @@ void Heap::IterateStrongRoots(RootVisitor* v, VisitMode mode) {
       // Global handles are processed manually be the minor MC.
       break;
     case VISIT_ALL_IN_SWEEP_NEWSPACE:
+    case VISIT_ALL_FOR_STARTUP_SERIALIZATION:
+    case VISIT_ALL_FOR_STARTUP_DESERIALIZATION:
     case VISIT_ALL:
       isolate_->global_handles()->IterateAllRoots(v);
       break;
@@ -5398,7 +5404,7 @@ void Heap::IterateStrongRoots(RootVisitor* v, VisitMode mode) {
   // Iterate over eternal handles.
   if (isMinorGC) {
     isolate_->eternal_handles()->IterateNewSpaceRoots(v);
-  } else {
+  } else if (mode != VISIT_ONLY_STRONG_FOR_SERIALIZATION) {
     isolate_->eternal_handles()->IterateAllRoots(v);
   }
   v->Synchronize(VisitorSynchronization::kEternalHandles);

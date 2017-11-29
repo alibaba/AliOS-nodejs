@@ -708,6 +708,18 @@ void Heap::SetSerializedGlobalProxySizes(FixedArray* sizes) {
   set_serialized_global_proxy_sizes(sizes);
 }
 
+void Heap::SetSerializedGlobalHandles(FixedArray* handles) {
+  DCHECK_EQ(empty_fixed_array(), serialized_global_handles());
+  DCHECK(isolate()->serializer_enabled());
+  set_serialized_global_handles(handles);
+}
+
+void Heap::SetSerializedEternalHandles(FixedArray* handles) {
+  DCHECK_EQ(empty_fixed_array(), serialized_eternal_handles());
+  DCHECK(isolate()->serializer_enabled());
+  set_serialized_eternal_handles(handles);
+}
+
 void Heap::CreateObjectStats() {
   if (V8_LIKELY(FLAG_gc_stats == 0)) return;
   if (!live_object_stats_) {

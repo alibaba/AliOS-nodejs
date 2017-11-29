@@ -227,6 +227,8 @@ using v8::MemoryPressureLevel;
   V(Object, noscript_shared_function_infos, NoScriptSharedFunctionInfos)       \
   V(FixedArray, serialized_templates, SerializedTemplates)                     \
   V(FixedArray, serialized_global_proxy_sizes, SerializedGlobalProxySizes)     \
+  V(FixedArray, serialized_global_handles, SerializedGlobalHandles)            \
+  V(FixedArray, serialized_eternal_handles, SerializedEternalHandles)          \
   V(TemplateList, message_listeners, MessageListeners)                         \
   /* per-Isolate map for JSPromiseCapability. */                               \
   /* TODO(caitp): Make this a Struct */                                        \
@@ -830,6 +832,8 @@ class Heap {
 
   inline void SetSerializedTemplates(FixedArray* templates);
   inline void SetSerializedGlobalProxySizes(FixedArray* sizes);
+  inline void SetSerializedGlobalHandles(FixedArray* handles);
+  inline void SetSerializedEternalHandles(FixedArray* handles);
 
   // For post mortem debugging.
   void RememberUnmappedPage(Address page, bool compacted);
