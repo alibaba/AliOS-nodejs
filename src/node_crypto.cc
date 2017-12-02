@@ -150,9 +150,9 @@ static const char* const root_certs[] = {
 #include "node_root_certs.h"  // NOLINT(build/include_order)
 };
 
-static std::string extra_root_certs_file;  // NOLINT(runtime/string)
+thread_local static std::string extra_root_certs_file;  // NOLINT(runtime/string)
 
-static X509_STORE* root_cert_store;
+thread_local static X509_STORE* root_cert_store;
 
 // Just to generate static methods
 template void SSLWrap<TLSWrap>::AddMethods(Environment* env,
@@ -787,7 +787,7 @@ static int X509_up_ref(X509* cert) {
 
 
 static X509_STORE* NewRootCertStore() {
-  static std::vector<X509*> root_certs_vector;
+  thread_local static std::vector<X509*> root_certs_vector;
   if (root_certs_vector.empty()) {
     for (size_t i = 0; i < arraysize(root_certs); i++) {
       BIO* bp = NodeBIO::NewFixed(root_certs[i], strlen(root_certs[i]));

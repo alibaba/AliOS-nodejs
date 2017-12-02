@@ -43,6 +43,11 @@ class NodePlatform : public v8::Platform {
   bool FlushForegroundTasksInternal();
   void Shutdown();
 
+// <YUNOS> changed: begin
+  void StartupCurrent(uv_loop_t* loop);
+  void ShutdownCurrent();
+// <YUNOS> changed: end
+
   // v8::Platform implementation.
   size_t NumberOfAvailableBackgroundThreads() override;
   void CallOnBackgroundThread(v8::Task* task,
@@ -55,10 +60,11 @@ class NodePlatform : public v8::Platform {
   v8::TracingController* GetTracingController() override;
 
  private:
-  uv_loop_t* const loop_;
-  uv_async_t flush_tasks_;
-  TaskQueue<v8::Task> foreground_tasks_;
-  TaskQueue<std::pair<v8::Task*, double>> foreground_delayed_tasks_;
+  thread_local static uv_loop_t* loop_;
+  thread_local static uv_async_t flush_tasks_;
+  thread_local static TaskQueue<v8::Task> foreground_tasks_;
+  thread_local static TaskQueue<std::pair<v8::Task*, double>> foreground_delayed_tasks_;
+
   TaskQueue<v8::Task> background_tasks_;
   std::vector<std::unique_ptr<uv_thread_t>> threads_;
 

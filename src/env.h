@@ -56,6 +56,11 @@ namespace loader {
 class ModuleWrap;
 }
 
+
+namespace worker {
+class Worker;
+}
+
 // Pick an index that's hopefully out of the way when we're embedded inside
 // another application. Performance-wise or memory-wise it doesn't matter:
 // Context::SetAlignedPointerInEmbedderData() is backed by a FixedArray,
@@ -118,6 +123,7 @@ class ModuleWrap;
   V(code_string, "code")                                                      \
   V(configurable_string, "configurable")                                      \
   V(cwd_string, "cwd")                                                        \
+  V(data_string, "data")                                                      \
   V(dest_string, "dest")                                                      \
   V(destroy_string, "destroy")                                                \
   V(detached_string, "detached")                                              \
@@ -343,9 +349,12 @@ struct node_async_ids {
 class IsolateData {
  public:
   inline IsolateData(v8::Isolate* isolate, uv_loop_t* event_loop,
-                     uint32_t* zero_fill_field = nullptr);
+                     uint32_t* zero_fill_field = nullptr,
+                     worker::Worker* worker = nullptr);
   inline uv_loop_t* event_loop() const;
   inline uint32_t* zero_fill_field() const;
+  inline void set_worker(worker::Worker* worker);
+  inline worker::Worker* worker() const;
 
 #define VP(PropertyName, StringValue) V(v8::Private, PropertyName)
 #define VS(PropertyName, StringValue) V(v8::String, PropertyName)
@@ -372,6 +381,9 @@ class IsolateData {
 
   uv_loop_t* const event_loop_;
   uint32_t* const zero_fill_field_;
+// <YUNOS> changed: begin
+  worker::Worker* worker_;
+// <YUNOS> changed: end
 
   DISALLOW_COPY_AND_ASSIGN(IsolateData);
 };
@@ -553,6 +565,9 @@ class Environment {
 
   inline v8::Isolate* isolate() const;
   inline uv_loop_t* event_loop() const;
+
+  inline worker::Worker* worker() const;
+
   inline bool in_domain() const;
   inline uint32_t watched_providers() const;
 

@@ -28,6 +28,9 @@
 #include "node_revert.h"
 #include "node_debug_options.h"
 #include "node_perf.h"
+// <YUNOS> changed: begin
+#include "node_thread_worker.h"
+// <YUNOS> changed: end
 
 #if defined HAVE_PERFCTR
 #include "node_counters.h"
@@ -186,6 +189,14 @@ static node_module* modlist_addon;
 static bool trace_enabled = false;
 static std::string trace_enabled_categories;  // NOLINT(runtime/string)
 static bool abort_on_uncaught_exception = false;
+// <YUNOS> changed: begin
+static Mutex modlist_addon_mutex;
+static ArrayBufferAllocator* node_array_buffer_allocator;
+static unsigned int global_exec_argc;
+static const char **global_exec_argv;
+static const char *global_exec_node;
+// <YUNOS> changed: end
+
 
 // Bit flag used to track security reverts (see node_revert.h)
 unsigned int reverted = 0;
@@ -308,6 +319,15 @@ static struct {
     tracing_agent_->Stop();
   }
 
+// <YUNOS> changed: begin
+  void InitializeForWorker(uv_loop_t* loop) {
+    platform_->StartupCurrent(loop);
+  }
+  void DisposeForWorker() {
+    platform_->ShutdownCurrent();
+  }
+// <YUNOS> changed: end
+
   tracing::Agent* tracing_agent_;
   NodePlatform* platform_;
 #else  // !NODE_USE_V8_PLATFORM
@@ -325,7 +345,14 @@ static struct {
                     "so event tracing is not available.\n");
   }
   void StopTracingAgent() {}
+
+// <YUNOS> changed: begin
+  void InitializeForWorker(uv_loop_t* loop) {}
+  void DisposeForWorker() {}
+// <YUNOS> changed: end
+
 #endif  // !NODE_USE_V8_PLATFORM
+
 
 #if !NODE_USE_V8_PLATFORM || !HAVE_INSPECTOR
   bool InspectorStarted(Environment *env) {
@@ -2477,8 +2504,19 @@ static void WaitForInspectorDisconnect(Environment* env) {
 
 
 static void Exit(const FunctionCallbackInfo<Value>& args) {
+
+  int exitCode = args[0]->Int32Value();
+// <YUNOS> changed: begin
+  if (exitCode == 0) {
+    Environment* env = Environment::GetCurrent(args);
+    if (env->worker() != NULL) {
+      env->worker()->Close();
+      return;
+    }
+  }
+// <YUNOS> changed: end
   WaitForInspectorDisconnect(Environment::GetCurrent(args));
-  exit(args[0]->Int32Value());
+  exit(exitCode);
 }
 
 
@@ -2631,6 +2669,7 @@ node_module* get_internal_module(const char* name) {
 node_module* get_linked_module(const char* name) {
   return FindModule(modlist_linked, name, NM_F_LINKED);
 }
+
 
 // DLOpen is process.dlopen(module, filename).
 // Used to load 'module.node' dynamically shared objects.
@@ -4265,6 +4304,13 @@ static void ParseArgs(int* argc,
   *v8_argc = new_v8_argc;
   *v8_argv = new_v8_argv;
 
+// <YUNOS> changed: begin
+  // We expose exec argc and argv for workers.
+  global_exec_argv = new_exec_argv;
+  global_exec_argc = new_exec_argc;
+  global_exec_node = argv[0];
+// <YUNOS> changed: end
+
   // Copy new_argv over argv and update argc.
   memcpy(argv, new_argv, new_argc * sizeof(*argv));
   delete[] new_argv;
@@ -4759,19 +4805,36 @@ inline int Start(Isolate* isolate, IsolateData* isolate_data,
   Context::Scope context_scope(context);
   Environment env(isolate_data, context);
   CHECK_EQ(0, uv_key_create(&thread_local_env));
+
+  bool in_main = env.worker() == nullptr;
+  if (in_main) {
+    CHECK_EQ(0, uv_key_create(&thread_local_env));
+  }
+
   uv_key_set(&thread_local_env, &env);
   env.Start(argc, argv, exec_argc, exec_argv, v8_is_profiling);
 
-  const char* path = argc > 1 ? argv[1] : nullptr;
-  StartInspector(&env, path, debug_options);
+  if (in_main) {
+    const char* path = argc > 1 ? argv[1] : nullptr;
+    StartInspector(&env, path, debug_options);
 
-  if (debug_options.inspector_enabled() && !v8_platform.InspectorStarted(&env))
-    return 12;  // Signal internal error.
-
+    if (debug_options.inspector_enabled() && !v8_platform.InspectorStarted(&env))
+      return 12;  // Signal internal error.
+  }
   env.set_abort_on_uncaught_exception(abort_on_uncaught_exception);
 
   if (force_async_hooks_checks) {
     env.async_hooks()->force_checks();
+  }
+
+  if (in_main) {
+    v8::WorkerSerialization* worker_serialization =
+      new v8::WorkerSerialization(node_array_buffer_allocator);
+    // worker_serialization is shared by main and worker threads.
+    // It is alloced and released by main thread.
+    worker::Worker::SetWorkerSerialization(worker_serialization);
+  } else {
+    worker::Worker::WorkerLoadedCallback(&env, env.worker());
   }
 
   {
@@ -4808,11 +4871,17 @@ inline int Start(Isolate* isolate, IsolateData* isolate_data,
   env.set_trace_sync_io(false);
 
   const int exit_code = EmitExit(&env);
+
   RunAtExit(&env);
-  uv_key_delete(&thread_local_env);
+
+  if (in_main) {
+    uv_key_delete(&thread_local_env);
+  }
 
   v8_platform.DrainVMTasks();
-  WaitForInspectorDisconnect(&env);
+  if (in_main) {
+    WaitForInspectorDisconnect(&env);
+  }
 #if defined(LEAK_SANITIZER)
   __lsan_do_leak_check();
 #endif
@@ -4820,12 +4889,46 @@ inline int Start(Isolate* isolate, IsolateData* isolate_data,
   return exit_code;
 }
 
+// <YUNOS> changed: begin
+void NodeInstanceBaseLooperQuit() {
+}
+
+void StartWorkerInstance(Isolate* isolate, worker::Worker* worker) {
+  uv_loop_t* event_loop = worker->event_loop();
+  v8_platform.InitializeForWorker(event_loop);
+  int argc = 2;
+  const char* argv[] = {global_exec_node, worker->script()};
+
+  isolate->AddMessageListener(OnMessage);
+  isolate->SetAbortOnUncaughtExceptionCallback(ShouldAbortOnUncaughtException);
+  isolate->SetAutorunMicrotasks(false);
+  isolate->SetFatalErrorHandler(OnFatalError);
+
+  if (track_heap_objects) {
+    isolate->GetHeapProfiler()->StartTrackingHeapObjects(true);
+  }
+  {
+    Locker locker(isolate);
+    Isolate::Scope isolate_scope(isolate);
+    HandleScope handle_scope(isolate);
+    IsolateData isolate_data(isolate, event_loop,
+                             node_array_buffer_allocator->zero_fill_field(), worker);
+    Start(isolate, &isolate_data,
+          argc, const_cast<const char* const*>(argv),
+          global_exec_argc , const_cast<const char* const*>(global_exec_argv));
+  }
+  v8_platform.DisposeForWorker();
+}
+// <YUNOS> changed: end
+
+
 inline int Start(uv_loop_t* event_loop,
                  int argc, const char* const* argv,
                  int exec_argc, const char* const* exec_argv) {
   Isolate::CreateParams params;
   ArrayBufferAllocator allocator;
   params.array_buffer_allocator = &allocator;
+  node_array_buffer_allocator = &allocator;
 #ifdef NODE_ENABLE_VTUNE_PROFILING
   params.code_event_handler = vTune::GetVtuneCodeEventHandler();
 #endif

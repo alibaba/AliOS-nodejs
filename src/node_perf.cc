@@ -27,8 +27,8 @@ const uint64_t timeOrigin = PERFORMANCE_NOW();
 uint64_t performance_node_start;
 uint64_t performance_v8_start;
 
-uint64_t performance_last_gc_start_mark_ = 0;
-v8::GCType performance_last_gc_type_ = v8::GCType::kGCTypeAll;
+thread_local uint64_t performance_last_gc_start_mark_ = 0;
+thread_local v8::GCType performance_last_gc_type_ = v8::GCType::kGCTypeAll;
 
 void PerformanceEntry::New(const FunctionCallbackInfo<Value>& args) {
   Environment* env = Environment::GetCurrent(args);

@@ -228,6 +228,7 @@
         'src/udp_wrap.cc',
         'src/util.cc',
         'src/uv.cc',
+        'src/node_thread_worker.cc',
         # headers to make for a more pleasant IDE experience
         'src/aliased_buffer.h',
         'src/async-wrap.h',
@@ -280,6 +281,7 @@
         'deps/http_parser/http_parser.h',
         'deps/v8/include/v8.h',
         'deps/v8/include/v8-debug.h',
+        'src/node_thread_worker.h',
         # javascript files to make for an even more pleasant IDE experience
         '<@(library_files)',
         # node.gyp is added to the project by default.
@@ -651,6 +653,8 @@
       'sources': [
         'src/node_platform.cc',
         'src/node_platform.h',
+        'src/node_thread_worker.cc',
+        'src/node_thread_worker.h',
         'test/cctest/node_test_fixture.cc',
         'test/cctest/test_aliased_buffer.cc',
         'test/cctest/test_base64.cc',

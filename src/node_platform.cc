@@ -13,6 +13,12 @@ using v8::Platform;
 using v8::Task;
 using v8::TracingController;
 
+thread_local uv_loop_t* NodePlatform::loop_;
+thread_local uv_async_t NodePlatform::flush_tasks_;
+thread_local TaskQueue<v8::Task> NodePlatform::foreground_tasks_;
+thread_local TaskQueue<std::pair<v8::Task*, double>> NodePlatform::foreground_delayed_tasks_;
+
+
 static void FlushTasks(uv_async_t* handle) {
   NodePlatform* platform = static_cast<NodePlatform*>(handle->data);
   platform->FlushForegroundTasksInternal();
@@ -27,12 +33,22 @@ static void BackgroundRunner(void* data) {
   }
 }
 
-NodePlatform::NodePlatform(int thread_pool_size, uv_loop_t* loop,
-                           TracingController* tracing_controller)
-    : loop_(loop) {
+void NodePlatform::StartupCurrent(uv_loop_t* loop) {
+  loop_ = loop;
   CHECK_EQ(0, uv_async_init(loop, &flush_tasks_, FlushTasks));
   flush_tasks_.data = static_cast<void*>(this);
   uv_unref(reinterpret_cast<uv_handle_t*>(&flush_tasks_));
+}
+
+NodePlatform::NodePlatform(int thread_pool_size, uv_loop_t* loop,
+                           TracingController* tracing_controller) {
+  //  : loop_(loop) {
+
+  // CHECK_EQ(0, uv_async_init(loop, &flush_tasks_, FlushTasks));
+  // flush_tasks_.data = static_cast<void*>(this);
+  // uv_unref(reinterpret_cast<uv_handle_t*>(&flush_tasks_));
+  StartupCurrent(loop);
+
   if (tracing_controller) {
     tracing_controller_.reset(tracing_controller);
   } else {
@@ -49,11 +65,7 @@ NodePlatform::NodePlatform(int thread_pool_size, uv_loop_t* loop,
   }
 }
 
-void NodePlatform::Shutdown() {
-  background_tasks_.Stop();
-  for (size_t i = 0; i < threads_.size(); i++) {
-    CHECK_EQ(0, uv_thread_join(threads_[i].get()));
-  }
+void NodePlatform::ShutdownCurrent() {
   // uv_run cannot be called from the time before the beforeExit callback
   // runs until the program exits unless the event loop has any referenced
   // handles after beforeExit terminates. This prevents unrefed timers
@@ -62,6 +74,15 @@ void NodePlatform::Shutdown() {
   // up.
   uv_close(reinterpret_cast<uv_handle_t*>(&flush_tasks_), nullptr);
 }
+
+void NodePlatform::Shutdown() {
+  background_tasks_.Stop();
+  for (size_t i = 0; i < threads_.size(); i++) {
+    CHECK_EQ(0, uv_thread_join(threads_[i].get()));
+  }
+  ShutdownCurrent();
+}
+
 
 size_t NodePlatform::NumberOfAvailableBackgroundThreads() {
   return threads_.size();

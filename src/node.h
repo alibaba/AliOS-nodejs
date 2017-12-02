@@ -227,6 +227,12 @@ NODE_EXTERN void EmitBeforeExit(Environment* env);
 NODE_EXTERN int EmitExit(Environment* env);
 NODE_EXTERN void RunAtExit(Environment* env);
 
+namespace worker {
+  class Worker;
+}
+void StartWorkerInstance(v8::Isolate* isolate, worker::Worker* worker);
+void NodeInstanceBaseLooperQuit();
+
 /* Converts a unixtime to V8 Date */
 #define NODE_UNIXTIME_V8(t) v8::Date::New(v8::Isolate::GetCurrent(),          \
     1000 * static_cast<double>(t))

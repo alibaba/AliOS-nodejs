@@ -39,7 +39,8 @@
 namespace node {
 
 inline IsolateData::IsolateData(v8::Isolate* isolate, uv_loop_t* event_loop,
-                                uint32_t* zero_fill_field) :
+                                uint32_t* zero_fill_field,
+                                worker::Worker* worker) :
 
 // Create string and private symbol properties as internalized one byte strings.
 //
@@ -72,7 +73,9 @@ inline IsolateData::IsolateData(v8::Isolate* isolate, uv_loop_t* event_loop,
             sizeof(StringValue) - 1).ToLocalChecked()),
     PER_ISOLATE_STRING_PROPERTIES(V)
 #undef V
-    event_loop_(event_loop), zero_fill_field_(zero_fill_field) {}
+    event_loop_(event_loop),
+    zero_fill_field_(zero_fill_field),
+    worker_(worker) {}
 
 inline uv_loop_t* IsolateData::event_loop() const {
   return event_loop_;
@@ -81,6 +84,19 @@ inline uv_loop_t* IsolateData::event_loop() const {
 inline uint32_t* IsolateData::zero_fill_field() const {
   return zero_fill_field_;
 }
+
+inline void IsolateData::set_worker(worker::Worker* worker) {
+  worker_ = worker;
+}
+
+inline worker::Worker* IsolateData::worker() const {
+  return worker_;
+}
+
+inline worker::Worker* Environment::worker() const {
+  return isolate_data()->worker();
+}
+
 
 inline Environment::AsyncHooks::AsyncHooks(v8::Isolate* isolate)
     : isolate_(isolate),

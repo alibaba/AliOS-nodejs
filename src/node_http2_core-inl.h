@@ -14,7 +14,7 @@ namespace http2 {
 
 // Instances of Nghttp2Stream are created and pooled in order to speed
 // allocation under load.
-extern Freelist<Nghttp2Stream, FREELIST_MAX> stream_free_list;
+extern thread_local Freelist<Nghttp2Stream, FREELIST_MAX> stream_free_list;
 
 #ifdef NODE_DEBUG_HTTP2
 inline int Nghttp2Session::OnNghttpError(nghttp2_session* session,
