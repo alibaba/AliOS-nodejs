@@ -183,6 +183,17 @@ void DefineJavaScript(Environment* env, v8::Local<v8::Object> target) {{
   {initializers}
 }}
 
+static v8::String::ExternalStringResourceBase* resources[] = {{
+  {resources}
+}};
+
+v8::String::ExternalStringResourceBase** NativeSourceResources(size_t* length) {{
+  if (length) {{
+    *length = arraysize(resources);
+  }}
+  return resources;
+}}
+
 }}  // namespace node
 """
 
@@ -216,6 +227,11 @@ INITIALIZER = """\
 CHECK(target->Set(env->context(),
                   {key}.ToStringChecked(env->isolate()),
                   {value}.ToStringChecked(env->isolate())).FromJust());
+"""
+
+RESOURCES = """\
+  &{key},
+  &{value},
 """
 
 DEPRECATED_DEPS = """\
@@ -258,6 +274,7 @@ def JS2C(source, target):
   # Build source code lines
   definitions = []
   initializers = []
+  resources = []
 
   for name in modules:
     lines = ReadFile(str(name))
@@ -286,6 +303,7 @@ def JS2C(source, target):
     definitions.append(Render(key, name))
     definitions.append(Render(value, lines))
     initializers.append(INITIALIZER.format(key=key, value=value))
+    resources.append(RESOURCES.format(key=key, value=value))
 
     if deprecated_deps is not None:
       name = '/'.join(deprecated_deps)
@@ -297,11 +315,13 @@ def JS2C(source, target):
       definitions.append(Render(key, name))
       definitions.append(Render(value, DEPRECATED_DEPS.format(module=name)))
       initializers.append(INITIALIZER.format(key=key, value=value))
+      resources.append(RESOURCES.format(key=key, value=value))
 
   # Emit result
   output = open(str(target[0]), "w")
   output.write(TEMPLATE.format(definitions=''.join(definitions),
-                               initializers=''.join(initializers)))
+                               initializers=''.join(initializers),
+                               resources=''.join(resources)))
   output.close()
 
 def main():

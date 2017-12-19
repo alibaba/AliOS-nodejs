@@ -9,6 +9,7 @@
 #include "env.h"
 #include "node_external_refs.h"
 #include "module_wrap.h"
+#include "node_javascript.h"
 
 #if 0
 #include "node_buffer.h"
@@ -113,6 +114,12 @@ void InitExternalReferences(ExternalReferenceRegister* reg, uint8_t* env_addr) {
   YunosLogRegisterExternalReferences(reg);
 
 #endif
+  size_t length;
+  v8::String::ExternalStringResourceBase** resources = NativeSourceResources(&length);
+  for (size_t i = 0; i < length; ++i) {
+    reg->add(reinterpret_cast<intptr_t> (resources[i]));
+  }
+
   reg->add(NULL);
 }
 
