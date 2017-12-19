@@ -73,6 +73,12 @@ ExternalReferenceEncoder::Value ExternalReferenceEncoder::Encode(
   return result;
 }
 
+bool ExternalReferenceEncoder::IsValidExternalReference(Address address) {
+  Maybe<uint32_t> maybe_index = map_->Get(address);
+  if (maybe_index.IsNothing()) return false;
+  return true;
+}
+
 const char* ExternalReferenceEncoder::NameOfAddress(Isolate* isolate,
                                                     Address address) const {
   Maybe<uint32_t> maybe_index = map_->Get(address);

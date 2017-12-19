@@ -40,6 +40,7 @@ class ExternalReferenceEncoder {
   ~ExternalReferenceEncoder();
 
   Value Encode(Address key);
+  bool IsValidExternalReference(Address key);
 
   const char* NameOfAddress(Isolate* isolate, Address address) const;
 

@@ -922,6 +922,7 @@ class AllocationSite;
 class Cell;
 class ConsString;
 class ElementsAccessor;
+class ExternalString;
 class FindAndReplacePattern;
 class FixedArrayBase;
 class PropertyArray;
@@ -7181,6 +7182,9 @@ class ObjectVisitor BASE_EMBEDDED {
 
   // Visits an external reference.
   virtual void VisitExternalReference(Foreign* host, Address* p) {}
+
+  // Visits an external reference embedded into a external string object.
+  virtual void VisitExternalReference(ExternalString* host, Address* p) {}
 
   // Visits an (encoded) internal reference.
   virtual void VisitInternalReference(Code* host, RelocInfo* rinfo) {}

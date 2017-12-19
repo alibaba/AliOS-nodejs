@@ -321,6 +321,11 @@ class ExternalOneByteString::BodyDescriptor final : public BodyDescriptorBase {
   template <typename ObjectVisitor>
   static inline void IterateBody(HeapObject* obj, int object_size,
                                  ObjectVisitor* v) {
+    if (obj->map() != obj->GetHeap()->native_source_string_map()) {
+      v->VisitExternalReference(ExternalString::cast(obj),
+                                reinterpret_cast<Address*>(HeapObject::RawField(
+                                    obj, kResourceOffset)));
+    }
   }
 
   static inline int SizeOf(Map* map, HeapObject* object) { return kSize; }
@@ -333,6 +338,11 @@ class ExternalTwoByteString::BodyDescriptor final : public BodyDescriptorBase {
   template <typename ObjectVisitor>
   static inline void IterateBody(HeapObject* obj, int object_size,
                                  ObjectVisitor* v) {
+    if (obj->map() != obj->GetHeap()->native_source_string_map()) {
+      v->VisitExternalReference(ExternalString::cast(obj),
+                                reinterpret_cast<Address*>(HeapObject::RawField(
+                                    obj, kResourceOffset)));
+    }
   }
 
   static inline int SizeOf(Map* map, HeapObject* object) { return kSize; }

@@ -208,13 +208,20 @@ HeapObject* Deserializer::PostProcessNewObject(HeapObject* obj, int space) {
       accessor_infos_.push_back(AccessorInfo::cast(obj));
     }
   } else if (obj->IsExternalOneByteString()) {
-    DCHECK(obj->map() == isolate_->heap()->native_source_string_map());
-    ExternalOneByteString* string = ExternalOneByteString::cast(obj);
-    DCHECK(string->is_short());
-    string->set_resource(
-        NativesExternalStringResource::DecodeForDeserialization(
-            string->resource()));
-    isolate_->heap()->RegisterExternalString(string);
+    if (obj->map() == isolate_->heap()->native_source_string_map()) {
+      ExternalOneByteString* string = ExternalOneByteString::cast(obj);
+      DCHECK(string->is_short());
+      string->set_resource(
+          NativesExternalStringResource::DecodeForDeserialization(
+              string->resource()));
+      isolate_->heap()->RegisterExternalString(string);
+    } else {
+      ExternalOneByteString* string = ExternalOneByteString::cast(obj);
+      isolate_->heap()->RegisterExternalString(string);
+    }
+  } else if (obj->IsExternalTwoByteString()) {
+      ExternalTwoByteString* string = ExternalTwoByteString::cast(obj);
+      isolate_->heap()->RegisterExternalString(string);
   } else if (obj->IsJSArrayBuffer()) {
     JSArrayBuffer* buffer = JSArrayBuffer::cast(obj);
     // Only fixup for the off-heap case.

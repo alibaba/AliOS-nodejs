@@ -199,6 +199,10 @@ class Serializer : public SerializerDeserializer {
     return external_reference_encoder_.Encode(addr);
   }
 
+  bool IsValidExternalReference(Address addr) {
+    return external_reference_encoder_.IsValidExternalReference(addr);
+  }
+
   bool HasNotExceededFirstPageOfEachSpace();
 
   // GetInt reads 4 bytes at once, requiring padding at the end.
@@ -315,6 +319,7 @@ class Serializer::ObjectSerializer : public ObjectVisitor {
   void VisitPointers(HeapObject* host, Object** start, Object** end) override;
   void VisitEmbeddedPointer(Code* host, RelocInfo* target) override;
   void VisitExternalReference(Foreign* host, Address* p) override;
+  void VisitExternalReference(ExternalString* host, Address* p) override;
   void VisitExternalReference(Code* host, RelocInfo* rinfo) override;
   void VisitInternalReference(Code* host, RelocInfo* rinfo) override;
   void VisitCodeTarget(Code* host, RelocInfo* target) override;

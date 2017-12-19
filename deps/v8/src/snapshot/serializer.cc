@@ -470,6 +470,23 @@ void Serializer::ObjectSerializer::SerializeFixedTypedArray() {
 void Serializer::ObjectSerializer::SerializeExternalString() {
   Heap* heap = serializer_->isolate()->heap();
   if (object_->map() != heap->native_source_string_map()) {
+    if (object_->IsExternalOneByteString()) {
+      ExternalOneByteString* string = ExternalOneByteString::cast(object_);
+      ExternalOneByteString::Resource* resource =
+        const_cast<ExternalOneByteString::Resource*>(string->resource());
+      if (serializer_->IsValidExternalReference(reinterpret_cast<Address>(resource))) {
+        SerializeContent();
+        return;
+      }
+    } else if (object_->IsExternalTwoByteString()) {
+      ExternalTwoByteString* string = ExternalTwoByteString::cast(object_);
+      ExternalTwoByteString::Resource* resource =
+        const_cast<ExternalTwoByteString::Resource*>(string->resource());
+      if (serializer_->IsValidExternalReference(reinterpret_cast<Address>(resource))) {
+        SerializeContent();
+        return;
+      }
+    }
     // Usually we cannot recreate resources for external strings. To work
     // around this, external strings are serialized to look like ordinary
     // sequential strings.
@@ -723,6 +740,22 @@ void Serializer::ObjectSerializer::VisitEmbeddedPointer(Code* host,
 }
 
 void Serializer::ObjectSerializer::VisitExternalReference(Foreign* host,
+                                                          Address* p) {
+  int skip = OutputRawData(reinterpret_cast<Address>(p),
+                           kCanReturnSkipInsteadOfSkipping);
+  Address target = *p;
+  auto encoded_reference = serializer_->EncodeExternalReference(target);
+  if (encoded_reference.is_from_api()) {
+    sink_->Put(kApiReference, "ApiRef");
+  } else {
+    sink_->Put(kExternalReference + kPlain + kStartOfObject, "ExternalRef");
+  }
+  sink_->PutInt(skip, "SkipB4ExternalRef");
+  sink_->PutInt(encoded_reference.index(), "reference index");
+  bytes_processed_so_far_ += kPointerSize;
+}
+
+void Serializer::ObjectSerializer::VisitExternalReference(ExternalString* host,
                                                           Address* p) {
   int skip = OutputRawData(reinterpret_cast<Address>(p),
                            kCanReturnSkipInsteadOfSkipping);
