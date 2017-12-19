@@ -2,6 +2,7 @@
   'variables': {
     'v8_use_snapshot%': 'true',
     'v8_trace_maps%': 0,
+    'node_use_snapshot%': 'false',
     'node_use_dtrace%': 'false',
     'node_use_lttng%': 'false',
     'node_use_etw%': 'false',
@@ -468,293 +469,6 @@
       ],
     },
     {
-      'target_name': 'node_mksnapshot',
-      'type': 'executable',
-
-      'dependencies': [
-        'node_js2c#host',
-        'deps/nghttp2/nghttp2.gyp:nghttp2',
-        'deps/v8/src/v8.gyp:v8_base',
-        'deps/v8/src/v8.gyp:v8_builtins_setup',
-        'deps/v8/src/v8.gyp:v8_libbase',
-        'deps/v8/src/v8.gyp:v8_libplatform',
-        'deps/v8/src/v8.gyp:v8_nosnapshot',
-      ],
-
-      'includes': [
-        'node.gypi'
-      ],
-
-      'include_dirs': [
-        'src',
-        'tools/msvs/genfiles',
-        '<(SHARED_INTERMEDIATE_DIR)', # for node_natives.h
-        'deps/nghttp2/lib/includes'
-      ],
-
-      'sources': [
-        'src/async_wrap.cc',
-        'src/cares_wrap.cc',
-        'src/connection_wrap.cc',
-        'src/connect_wrap.cc',
-        'src/env.cc',
-        'src/fs_event_wrap.cc',
-        'src/handle_wrap.cc',
-        'src/js_stream.cc',
-        'src/module_wrap.cc',
-        'src/node_api.cc',
-        'src/node_api.h',
-        'src/node_api_types.h',
-        'src/node_buffer.cc',
-        'src/node_config.cc',
-        'src/node_constants.cc',
-        'src/node_contextify.cc',
-        'src/node_debug_options.cc',
-        'src/node_external_refs.cc',
-        'src/node_file.cc',
-        'src/node_http2.cc',
-        'src/node_http_parser.cc',
-        'src/node_main.cc',
-        'src/node_mksnapshot.cc',
-        'src/node_os.cc',
-        'src/node_platform.cc',
-        'src/node_perf.cc',
-        'src/node_serdes.cc',
-        'src/node_trace_events.cc',
-        'src/node_url.cc',
-        'src/node_util.cc',
-        'src/node_v8.cc',
-        'src/node_stat_watcher.cc',
-        'src/node_watchdog.cc',
-        'src/node_zlib.cc',
-        'src/node_i18n.cc',
-        'src/pipe_wrap.cc',
-        'src/process_wrap.cc',
-        'src/signal_wrap.cc',
-        'src/spawn_sync.cc',
-        'src/string_bytes.cc',
-        'src/string_search.cc',
-        'src/stream_base.cc',
-        'src/stream_wrap.cc',
-        'src/tcp_wrap.cc',
-        'src/timer_wrap.cc',
-        'src/tracing/agent.cc',
-        'src/tracing/node_trace_buffer.cc',
-        'src/tracing/node_trace_writer.cc',
-        'src/tracing/trace_event.cc',
-        'src/tty_wrap.cc',
-        'src/udp_wrap.cc',
-        'src/util.cc',
-        'src/uv.cc',
-        # headers to make for a more pleasant IDE experience
-        'src/aliased_buffer.h',
-        'src/async_wrap.h',
-        'src/async_wrap-inl.h',
-        'src/base_object.h',
-        'src/base_object-inl.h',
-        'src/connection_wrap.h',
-        'src/connect_wrap.h',
-        'src/env.h',
-        'src/env-inl.h',
-        'src/handle_wrap.h',
-        'src/js_stream.h',
-        'src/module_wrap.h',
-        'src/node.h',
-        'src/node_external_refs.h',
-        'src/node_http2_core.h',
-        'src/node_http2_core-inl.h',
-        'src/node_buffer.h',
-        'src/node_constants.h',
-        'src/node_debug_options.h',
-        'src/node_http2.h',
-        'src/node_http2_state.h',
-        'src/node_internals.h',
-        'src/node_javascript.h',
-        'src/node_mutex.h',
-        'src/node_platform.h',
-        'src/node_perf.h',
-        'src/node_perf_common.h',
-        'src/node_root_certs.h',
-        'src/node_version.h',
-        'src/node_watchdog.h',
-        'src/node_wrap.h',
-        'src/node_revert.h',
-        'src/node_i18n.h',
-        'src/pipe_wrap.h',
-        'src/tty_wrap.h',
-        'src/tcp_wrap.h',
-        'src/udp_wrap.h',
-        'src/req_wrap.h',
-        'src/req_wrap-inl.h',
-        'src/string_bytes.h',
-        'src/stream_base.h',
-        'src/stream_base-inl.h',
-        'src/stream_wrap.h',
-        'src/tracing/agent.h',
-        'src/tracing/node_trace_buffer.h',
-        'src/tracing/node_trace_writer.h',
-        'src/tracing/trace_event.h',
-        'src/util.h',
-        'src/util-inl.h',
-        'deps/http_parser/http_parser.h',
-        'deps/v8/include/v8.h',
-        'deps/v8/include/v8-debug.h',
-        # javascript files to make for an even more pleasant IDE experience
-        '<@(library_files)',
-        # node.gyp is added to the project by default.
-        'common.gypi',
-        '<(SHARED_INTERMEDIATE_DIR)/node_javascript.cc',
-      ],
-
-      'variables': {
-        'openssl_system_ca_path%': '',
-      },
-
-      'defines': [
-        'NODE_ARCH="<(target_arch)"',
-        'NODE_PLATFORM="<(OS)"',
-        'NODE_WANT_INTERNALS=1',
-        # Warn when using deprecated V8 APIs.
-        'V8_DEPRECATION_WARNINGS=1',
-        'NODE_OPENSSL_SYSTEM_CERT_PATH="<(openssl_system_ca_path)"',
-      ],
-      'conditions': [
-        [ 'v8_enable_inspector==1', {
-          'defines': [
-            'HAVE_INSPECTOR=1',
-          ],
-          'sources': [
-            'src/inspector_agent.cc',
-            'src/inspector_io.cc',
-            'src/inspector_js_api.cc',
-            'src/inspector_socket.cc',
-            'src/inspector_socket_server.cc',
-            'src/inspector_agent.h',
-            'src/inspector_io.h',
-            'src/inspector_socket.h',
-            'src/inspector_socket_server.h',
-          ],
-          'dependencies': [
-            'v8_inspector_compress_protocol_json#host',
-          ],
-          'include_dirs': [
-            '<(SHARED_INTERMEDIATE_DIR)/include', # for inspector
-            '<(SHARED_INTERMEDIATE_DIR)',
-          ],
-        }, {
-          'defines': [ 'HAVE_INSPECTOR=0' ]
-        }],
-        [ 'OS=="win"', {
-          'sources': [
-            'src/backtrace_win32.cc',
-            'src/res/node.rc',
-          ],
-          'defines!': [
-            'NODE_PLATFORM="win"',
-          ],
-          'defines': [
-            'FD_SETSIZE=1024',
-            # we need to use node's preferred "win32" rather than gyp's preferred "win"
-            'NODE_PLATFORM="win32"',
-            '_UNICODE=1',
-          ],
-          'libraries': [ '-lpsapi.lib' ]
-        }, { # POSIX
-          'defines': [ '__POSIX__' ],
-          'sources': [ 'src/backtrace_posix.cc' ],
-        }],
-        [ 'node_use_dtrace=="true"', {
-          'defines': [ 'HAVE_DTRACE=1' ],
-          'dependencies': [
-            'node_dtrace_header',
-            'specialize_node_d',
-          ],
-          'include_dirs': [ '<(SHARED_INTERMEDIATE_DIR)' ],
-          #
-          # DTrace is supported on linux, solaris, mac, and bsd.  There are
-          # three object files associated with DTrace support, but they're
-          # not all used all the time:
-          #
-          #   node_dtrace.o           all configurations
-          #   node_dtrace_ustack.o    not supported on mac and linux
-          #   node_dtrace_provider.o  All except OS X.  "dtrace -G" is not
-          #                           used on OS X.
-          #
-          # Note that node_dtrace_provider.cc and node_dtrace_ustack.cc do not
-          # actually exist.  They're listed here to trick GYP into linking the
-          # corresponding object files into the final "node" executable.  These
-          # object files are generated by "dtrace -G" using custom actions
-          # below, and the GYP-generated Makefiles will properly build them when
-          # needed.
-          #
-          'sources': [ 'src/node_dtrace.cc' ],
-          'conditions': [
-            [ 'OS=="linux"', {
-              'sources': [
-                '<(SHARED_INTERMEDIATE_DIR)/node_dtrace_provider.o'
-              ],
-            }],
-            [ 'OS!="mac" and OS!="linux"', {
-              'sources': [
-                'src/node_dtrace_ustack.cc',
-                'src/node_dtrace_provider.cc',
-              ]
-            }
-          ] ]
-        } ],
-        [ 'node_use_openssl=="true"', {
-          'defines': [ 'HAVE_OPENSSL=1' ],
-          'sources': [
-            'src/node_crypto.cc',
-            'src/node_crypto_bio.cc',
-            'src/node_crypto_clienthello.cc',
-            'src/node_crypto.h',
-            'src/node_crypto_bio.h',
-            'src/node_crypto_clienthello.h',
-            'src/tls_wrap.cc',
-            'src/tls_wrap.h'
-          ],
-          'conditions': [
-            ['openssl_fips != ""', {
-              'defines': [ 'NODE_FIPS_MODE' ],
-            }],
-            [ 'node_shared_openssl=="false"', {
-              'dependencies': [
-                './deps/openssl/openssl.gyp:openssl',
-
-                # For tests
-                './deps/openssl/openssl.gyp:openssl-cli',
-              ],
-              'xcode_settings': {
-                'OTHER_LDFLAGS': [
-                  '-Wl,-force_load,<(PRODUCT_DIR)/<(OPENSSL_PRODUCT)',
-                ],
-              },
-              'conditions': [
-                ['OS in "linux freebsd" and node_shared=="false"', {
-                  'ldflags': [
-                    '-Wl,--whole-archive,'
-                        '<(OBJ_DIR)/deps/openssl/'
-                        '<(OPENSSL_PRODUCT)',
-                    '-Wl,--no-whole-archive',
-                  ],
-                }],
-                # openssl.def is based on zlib.def, zlib symbols
-                # are always exported.
-                ['use_openssl_def==1', {
-                  'sources': ['<(SHARED_INTERMEDIATE_DIR)/openssl.def'],
-                }],
-                ['OS=="win" and use_openssl_def==0', {
-                  'sources': ['deps/zlib/win32/zlib.def'],
-                }],
-              ],
-        }]]
-        }, {
-          'defines': [ 'HAVE_OPENSSL=0' ]
-        }],
-      ],
-    },
-    {
       'target_name': 'mkssldef',
       'type': 'none',
       # TODO(bnoordhuis) Make all platforms export the same list of symbols.
@@ -1049,219 +763,6 @@
         } ],
       ]
     },
-#     {
-#       'target_name': 'cctest',
-#       'type': 'executable',
-#
-#       'dependencies': [
-#         '<(node_core_target_name)',
-#         'deps/gtest/gtest.gyp:gtest',
-#         'node_js2c#host',
-#         'node_dtrace_header',
-#         'node_dtrace_ustack',
-#         'node_dtrace_provider',
-#       ],
-#
-#       'variables': {
-#         'OBJ_PATH': '<(OBJ_DIR)/node/src',
-#         'OBJ_GEN_PATH': '<(OBJ_DIR)/node/gen',
-#         'OBJ_TRACING_PATH': '<(OBJ_DIR)/node/src/tracing',
-#         'OBJ_SUFFIX': 'o',
-#         'OBJ_SEPARATOR': '/',
-#         'conditions': [
-#           ['OS=="win"', {
-#             'OBJ_SUFFIX': 'obj',
-#           }],
-#           ['GENERATOR=="ninja"', {
-#             'OBJ_PATH': '<(OBJ_DIR)/src',
-#             'OBJ_GEN_PATH': '<(OBJ_DIR)/gen',
-#             'OBJ_TRACING_PATH': '<(OBJ_DIR)/src/tracing',
-#             'OBJ_SEPARATOR': '/node.',
-#           }, {
-#             'conditions': [
-#               ['OS=="win"', {
-#                 'OBJ_PATH': '<(OBJ_DIR)/node',
-#                 'OBJ_GEN_PATH': '<(OBJ_DIR)/node',
-#                 'OBJ_TRACING_PATH': '<(OBJ_DIR)/node',
-#               }],
-#               ['OS=="aix"', {
-#                 'OBJ_PATH': '<(OBJ_DIR)/node_base/src',
-#                 'OBJ_GEN_PATH': '<(OBJ_DIR)/node_base/gen',
-#                 'OBJ_TRACING_PATH': '<(OBJ_DIR)/node_base/src/tracing',
-#               }],
-#             ]}
-#           ]
-#         ],
-#        },
-#
-#       'includes': [
-#         'node.gypi'
-#       ],
-#
-#       'include_dirs': [
-#         'src',
-#         'tools/msvs/genfiles',
-#         'deps/v8/include',
-#         'deps/cares/include',
-#         'deps/uv/include',
-#         '<(SHARED_INTERMEDIATE_DIR)', # for node_natives.h
-#       ],
-#
-#       'defines': [ 'NODE_WANT_INTERNALS=1' ],
-#
-#       'sources': [
-#         'test/cctest/node_module_reg.cc',
-#         'test/cctest/node_test_fixture.cc',
-#         'test/cctest/test_aliased_buffer.cc',
-#         'test/cctest/test_base64.cc',
-#         'test/cctest/test_environment.cc',
-#         'test/cctest/test_util.cc',
-#         'test/cctest/test_url.cc'
-#       ],
-#
-#       'sources!': [
-#         'src/node_main.cc'
-#       ],
-#
-#       'conditions': [
-#         ['node_target_type!="static_library"', {
-#           'libraries': [
-#             '<(OBJ_PATH)<(OBJ_SEPARATOR)async_wrap.<(OBJ_SUFFIX)',
-#             '<(OBJ_PATH)<(OBJ_SEPARATOR)env.<(OBJ_SUFFIX)',
-#             '<(OBJ_PATH)<(OBJ_SEPARATOR)node.<(OBJ_SUFFIX)',
-#             '<(OBJ_PATH)<(OBJ_SEPARATOR)node_buffer.<(OBJ_SUFFIX)',
-#             '<(OBJ_PATH)<(OBJ_SEPARATOR)node_debug_options.<(OBJ_SUFFIX)',
-#             '<(OBJ_PATH)<(OBJ_SEPARATOR)node_i18n.<(OBJ_SUFFIX)',
-#             '<(OBJ_PATH)<(OBJ_SEPARATOR)node_perf.<(OBJ_SUFFIX)',
-#             '<(OBJ_PATH)<(OBJ_SEPARATOR)node_platform.<(OBJ_SUFFIX)',
-#             '<(OBJ_PATH)<(OBJ_SEPARATOR)node_url.<(OBJ_SUFFIX)',
-#             '<(OBJ_PATH)<(OBJ_SEPARATOR)util.<(OBJ_SUFFIX)',
-#             '<(OBJ_PATH)<(OBJ_SEPARATOR)string_bytes.<(OBJ_SUFFIX)',
-#             '<(OBJ_PATH)<(OBJ_SEPARATOR)string_search.<(OBJ_SUFFIX)',
-#             '<(OBJ_PATH)<(OBJ_SEPARATOR)stream_base.<(OBJ_SUFFIX)',
-#             '<(OBJ_PATH)<(OBJ_SEPARATOR)node_constants.<(OBJ_SUFFIX)',
-#             '<(OBJ_TRACING_PATH)<(OBJ_SEPARATOR)agent.<(OBJ_SUFFIX)',
-#             '<(OBJ_TRACING_PATH)<(OBJ_SEPARATOR)node_trace_buffer.<(OBJ_SUFFIX)',
-#             '<(OBJ_TRACING_PATH)<(OBJ_SEPARATOR)node_trace_writer.<(OBJ_SUFFIX)',
-#             '<(OBJ_TRACING_PATH)<(OBJ_SEPARATOR)trace_event.<(OBJ_SUFFIX)',
-#             '<(OBJ_GEN_PATH)<(OBJ_SEPARATOR)node_javascript.<(OBJ_SUFFIX)',
-#           ],
-#         }],
-#         [ 'node_use_openssl=="true"', {
-#           'libraries': [
-#             '<(OBJ_PATH)<(OBJ_SEPARATOR)node_crypto.<(OBJ_SUFFIX)',
-#             '<(OBJ_PATH)<(OBJ_SEPARATOR)node_crypto_bio.<(OBJ_SUFFIX)',
-#             '<(OBJ_PATH)<(OBJ_SEPARATOR)node_crypto_clienthello.<(OBJ_SUFFIX)',
-#             '<(OBJ_PATH)<(OBJ_SEPARATOR)tls_wrap.<(OBJ_SUFFIX)',
-#           ],
-#         }],
-#         ['v8_enable_inspector==1', {
-#           'sources': [
-#             'test/cctest/test_inspector_socket.cc',
-#             'test/cctest/test_inspector_socket_server.cc'
-#           ],
-#           'libraries': [
-#             '<(OBJ_PATH)<(OBJ_SEPARATOR)inspector_agent.<(OBJ_SUFFIX)',
-#             '<(OBJ_PATH)<(OBJ_SEPARATOR)inspector_io.<(OBJ_SUFFIX)',
-#             '<(OBJ_PATH)<(OBJ_SEPARATOR)inspector_js_api.<(OBJ_SUFFIX)',
-#             '<(OBJ_PATH)<(OBJ_SEPARATOR)inspector_socket.<(OBJ_SUFFIX)',
-#             '<(OBJ_PATH)<(OBJ_SEPARATOR)inspector_socket_server.<(OBJ_SUFFIX)',
-#           ],
-#           'defines': [
-#             'HAVE_INSPECTOR=1',
-#           ],
-#         }],
-#         [ 'node_use_dtrace=="true"', {
-#           'libraries': [
-#             '<(OBJ_PATH)<(OBJ_SEPARATOR)node_dtrace.<(OBJ_SUFFIX)',
-#           ],
-#           'conditions': [
-#             ['OS!="mac" and OS!="linux"', {
-#               'libraries': [
-#                 '<(OBJ_PATH)<(OBJ_SEPARATOR)node_dtrace_provider.<(OBJ_SUFFIX)',
-#                 '<(OBJ_PATH)<(OBJ_SEPARATOR)node_dtrace_ustack.<(OBJ_SUFFIX)',
-#               ]
-#             }],
-#             ['OS=="linux"', {
-#               'libraries': [
-#                 '<(SHARED_INTERMEDIATE_DIR)/node_dtrace_provider.o',
-#               ]
-#             }],
-#           ],
-#         }],
-#         [ 'OS=="win"', {
-#           'libraries': [
-#             '<(OBJ_PATH)<(OBJ_SEPARATOR)backtrace_win32.<(OBJ_SUFFIX)',
-#            ],
-#         }, {
-#           'libraries': [
-#             '<(OBJ_PATH)<(OBJ_SEPARATOR)backtrace_posix.<(OBJ_SUFFIX)',
-#            ],
-#         }],
-#         [ 'node_shared_zlib=="false"', {
-#           'dependencies': [
-#             'deps/zlib/zlib.gyp:zlib',
-#            ]
-#         }],
-#         [ 'node_shared_openssl=="false" and node_shared=="false"', {
-#           'dependencies': [
-#             'deps/openssl/openssl.gyp:openssl'
-#           ]
-#         }],
-#         [ 'node_shared_http_parser=="false"', {
-#           'dependencies': [
-#             'deps/http_parser/http_parser.gyp:http_parser'
-#           ]
-#         }],
-#         [ 'node_shared_libuv=="false"', {
-#           'dependencies': [
-#             'deps/uv/uv.gyp:libuv'
-#           ]
-#         }],
-#         [ 'node_shared_nghttp2=="false"', {
-#           'dependencies': [
-#             'deps/nghttp2/nghttp2.gyp:nghttp2'
-#           ],
-#           'include_dirs': [
-#             'deps/nghttp2/lib/includes'
-#           ]
-#         }],
-#         [ 'node_use_v8_platform=="true"', {
-#           'dependencies': [
-#             'deps/v8/src/v8.gyp:v8_libplatform',
-#           ],
-#         }],
-#         ['OS=="solaris"', {
-#           'ldflags': [ '-I<(SHARED_INTERMEDIATE_DIR)' ]
-#         }],
-#         [ 'node_use_openssl=="true"', {
-#           'conditions': [
-#             [ 'node_shared_openssl=="false"', {
-#               'conditions': [
-#                 # -force_load or --whole-archive are not applicable for
-#                 # the static library
-#                 [ 'node_target_type!="static_library"', {
-#                   'xcode_settings': {
-#                     'OTHER_LDFLAGS': [
-#                       '-Wl,-force_load,<(PRODUCT_DIR)/<(OPENSSL_PRODUCT)',
-#                     ],
-#                   },
-#                   'conditions': [
-#                     ['OS in "linux freebsd" and node_shared=="false"', {
-#                       'ldflags': [
-#                         '-Wl,--whole-archive,'
-#                             '<(OBJ_DIR)/deps/openssl/'
-#                             '<(OPENSSL_PRODUCT)',
-#                         '-Wl,--no-whole-archive',
-#                       ],
-#                     }],
-#                   ],
-#                 }],
-#               ],
-#             }]]
-#         }],
-#       ]
-#     },
     {
       'target_name': 'node_postmortem_metadata',
       'type': 'none',
@@ -1391,5 +892,512 @@
         }
       ], # end targets
     }], # end aix section
+    ['node_use_snapshot=="true"', {
+      'targets': [
+        {
+          'target_name': 'node_mksnapshot',
+          'type': 'executable',
+
+          'dependencies': [
+            'node_js2c#host',
+            'deps/nghttp2/nghttp2.gyp:nghttp2',
+            'deps/v8/src/v8.gyp:v8_base',
+            'deps/v8/src/v8.gyp:v8_builtins_setup',
+            'deps/v8/src/v8.gyp:v8_libbase',
+            'deps/v8/src/v8.gyp:v8_libplatform',
+            'deps/v8/src/v8.gyp:v8_nosnapshot',
+          ],
+
+          'includes': [
+            'node.gypi'
+          ],
+
+          'include_dirs': [
+            'src',
+            'tools/msvs/genfiles',
+            '<(SHARED_INTERMEDIATE_DIR)', # for node_natives.h
+            'deps/nghttp2/lib/includes'
+          ],
+
+          'sources': [
+            'src/async_wrap.cc',
+            'src/cares_wrap.cc',
+            'src/connection_wrap.cc',
+            'src/connect_wrap.cc',
+            'src/env.cc',
+            'src/fs_event_wrap.cc',
+            'src/handle_wrap.cc',
+            'src/js_stream.cc',
+            'src/module_wrap.cc',
+            'src/node_api.cc',
+            'src/node_api.h',
+            'src/node_api_types.h',
+            'src/node_buffer.cc',
+            'src/node_config.cc',
+            'src/node_constants.cc',
+            'src/node_contextify.cc',
+            'src/node_debug_options.cc',
+            'src/node_external_refs.cc',
+            'src/node_file.cc',
+            'src/node_http2.cc',
+            'src/node_http_parser.cc',
+            'src/node_main.cc',
+            'src/node_mksnapshot.cc',
+            'src/node_os.cc',
+            'src/node_platform.cc',
+            'src/node_perf.cc',
+            'src/node_serdes.cc',
+            'src/node_trace_events.cc',
+            'src/node_url.cc',
+            'src/node_util.cc',
+            'src/node_v8.cc',
+            'src/node_stat_watcher.cc',
+            'src/node_watchdog.cc',
+            'src/node_zlib.cc',
+            'src/node_i18n.cc',
+            'src/pipe_wrap.cc',
+            'src/process_wrap.cc',
+            'src/signal_wrap.cc',
+            'src/spawn_sync.cc',
+            'src/string_bytes.cc',
+            'src/string_search.cc',
+            'src/stream_base.cc',
+            'src/stream_wrap.cc',
+            'src/tcp_wrap.cc',
+            'src/timer_wrap.cc',
+            'src/tracing/agent.cc',
+            'src/tracing/node_trace_buffer.cc',
+            'src/tracing/node_trace_writer.cc',
+            'src/tracing/trace_event.cc',
+            'src/tty_wrap.cc',
+            'src/udp_wrap.cc',
+            'src/util.cc',
+            'src/uv.cc',
+            # headers to make for a more pleasant IDE experience
+            'src/aliased_buffer.h',
+            'src/async_wrap.h',
+            'src/async_wrap-inl.h',
+            'src/base_object.h',
+            'src/base_object-inl.h',
+            'src/connection_wrap.h',
+            'src/connect_wrap.h',
+            'src/env.h',
+            'src/env-inl.h',
+            'src/handle_wrap.h',
+            'src/js_stream.h',
+            'src/module_wrap.h',
+            'src/node.h',
+            'src/node_external_refs.h',
+            'src/node_http2_core.h',
+            'src/node_http2_core-inl.h',
+            'src/node_buffer.h',
+            'src/node_constants.h',
+            'src/node_debug_options.h',
+            'src/node_http2.h',
+            'src/node_http2_state.h',
+            'src/node_internals.h',
+            'src/node_javascript.h',
+            'src/node_mutex.h',
+            'src/node_platform.h',
+            'src/node_perf.h',
+            'src/node_perf_common.h',
+            'src/node_root_certs.h',
+            'src/node_version.h',
+            'src/node_watchdog.h',
+            'src/node_wrap.h',
+            'src/node_revert.h',
+            'src/node_i18n.h',
+            'src/pipe_wrap.h',
+            'src/tty_wrap.h',
+            'src/tcp_wrap.h',
+            'src/udp_wrap.h',
+            'src/req_wrap.h',
+            'src/req_wrap-inl.h',
+            'src/string_bytes.h',
+            'src/stream_base.h',
+            'src/stream_base-inl.h',
+            'src/stream_wrap.h',
+            'src/tracing/agent.h',
+            'src/tracing/node_trace_buffer.h',
+            'src/tracing/node_trace_writer.h',
+            'src/tracing/trace_event.h',
+            'src/util.h',
+            'src/util-inl.h',
+            'deps/http_parser/http_parser.h',
+            'deps/v8/include/v8.h',
+            'deps/v8/include/v8-debug.h',
+            # javascript files to make for an even more pleasant IDE experience
+            '<@(library_files)',
+            # node.gyp is added to the project by default.
+            'common.gypi',
+            '<(SHARED_INTERMEDIATE_DIR)/node_javascript.cc',
+          ],
+
+          'variables': {
+            'openssl_system_ca_path%': '',
+          },
+
+          'defines': [
+            'NODE_ARCH="<(target_arch)"',
+            'NODE_PLATFORM="<(OS)"',
+            'NODE_WANT_INTERNALS=1',
+            # Warn when using deprecated V8 APIs.
+            'V8_DEPRECATION_WARNINGS=1',
+            'NODE_OPENSSL_SYSTEM_CERT_PATH="<(openssl_system_ca_path)"',
+          ],
+          'conditions': [
+            [ 'v8_enable_inspector==1', {
+              'defines': [
+                'HAVE_INSPECTOR=1',
+              ],
+              'sources': [
+                'src/inspector_agent.cc',
+                'src/inspector_io.cc',
+                'src/inspector_js_api.cc',
+                'src/inspector_socket.cc',
+                'src/inspector_socket_server.cc',
+                'src/inspector_agent.h',
+                'src/inspector_io.h',
+                'src/inspector_socket.h',
+                'src/inspector_socket_server.h',
+              ],
+              'dependencies': [
+                'v8_inspector_compress_protocol_json#host',
+              ],
+              'include_dirs': [
+                '<(SHARED_INTERMEDIATE_DIR)/include', # for inspector
+                '<(SHARED_INTERMEDIATE_DIR)',
+              ],
+            }, {
+              'defines': [ 'HAVE_INSPECTOR=0' ]
+            }],
+            [ 'OS=="win"', {
+              'sources': [
+                'src/backtrace_win32.cc',
+                'src/res/node.rc',
+              ],
+              'defines!': [
+                'NODE_PLATFORM="win"',
+              ],
+              'defines': [
+                'FD_SETSIZE=1024',
+                # we need to use node's preferred "win32" rather than gyp's preferred "win"
+                'NODE_PLATFORM="win32"',
+                '_UNICODE=1',
+              ],
+              'libraries': [ '-lpsapi.lib' ]
+            }, { # POSIX
+              'defines': [ '__POSIX__' ],
+              'sources': [ 'src/backtrace_posix.cc' ],
+            }],
+            [ 'node_use_dtrace=="true"', {
+              'defines': [ 'HAVE_DTRACE=1' ],
+              'dependencies': [
+                'node_dtrace_header',
+                'specialize_node_d',
+              ],
+              'include_dirs': [ '<(SHARED_INTERMEDIATE_DIR)' ],
+              #
+              # DTrace is supported on linux, solaris, mac, and bsd.  There are
+              # three object files associated with DTrace support, but they're
+              # not all used all the time:
+              #
+              #   node_dtrace.o           all configurations
+              #   node_dtrace_ustack.o    not supported on mac and linux
+              #   node_dtrace_provider.o  All except OS X.  "dtrace -G" is not
+              #                           used on OS X.
+              #
+              # Note that node_dtrace_provider.cc and node_dtrace_ustack.cc do not
+              # actually exist.  They're listed here to trick GYP into linking the
+              # corresponding object files into the final "node" executable.  These
+              # object files are generated by "dtrace -G" using custom actions
+              # below, and the GYP-generated Makefiles will properly build them when
+              # needed.
+              #
+              'sources': [ 'src/node_dtrace.cc' ],
+              'conditions': [
+                [ 'OS=="linux"', {
+                  'sources': [
+                    '<(SHARED_INTERMEDIATE_DIR)/node_dtrace_provider.o'
+                  ],
+                }],
+                [ 'OS!="mac" and OS!="linux"', {
+                  'sources': [
+                    'src/node_dtrace_ustack.cc',
+                    'src/node_dtrace_provider.cc',
+                  ]
+                }
+              ] ]
+            } ],
+            [ 'node_use_openssl=="true"', {
+              'defines': [ 'HAVE_OPENSSL=1' ],
+              'sources': [
+                'src/node_crypto.cc',
+                'src/node_crypto_bio.cc',
+                'src/node_crypto_clienthello.cc',
+                'src/node_crypto.h',
+                'src/node_crypto_bio.h',
+                'src/node_crypto_clienthello.h',
+                'src/tls_wrap.cc',
+                'src/tls_wrap.h'
+              ],
+              'conditions': [
+                ['openssl_fips != ""', {
+                  'defines': [ 'NODE_FIPS_MODE' ],
+                }],
+                [ 'node_shared_openssl=="false"', {
+                  'dependencies': [
+                    './deps/openssl/openssl.gyp:openssl',
+
+                    # For tests
+                    './deps/openssl/openssl.gyp:openssl-cli',
+                  ],
+                  'xcode_settings': {
+                    'OTHER_LDFLAGS': [
+                      '-Wl,-force_load,<(PRODUCT_DIR)/<(OPENSSL_PRODUCT)',
+                    ],
+                  },
+                  'conditions': [
+                    ['OS in "linux freebsd" and node_shared=="false"', {
+                      'ldflags': [
+                        '-Wl,--whole-archive,'
+                            '<(OBJ_DIR)/deps/openssl/'
+                            '<(OPENSSL_PRODUCT)',
+                        '-Wl,--no-whole-archive',
+                      ],
+                    }],
+                    # openssl.def is based on zlib.def, zlib symbols
+                    # are always exported.
+                    ['use_openssl_def==1', {
+                      'sources': ['<(SHARED_INTERMEDIATE_DIR)/openssl.def'],
+                    }],
+                    ['OS=="win" and use_openssl_def==0', {
+                      'sources': ['deps/zlib/win32/zlib.def'],
+                    }],
+                  ],
+            }]]
+            }, {
+              'defines': [ 'HAVE_OPENSSL=0' ]
+            }],
+          ],
+        },
+      ],
+    }, {
+      'targets': [
+        {
+          'target_name': 'cctest',
+          'type': 'executable',
+
+          'dependencies': [
+            '<(node_core_target_name)',
+            'deps/gtest/gtest.gyp:gtest',
+            'node_js2c#host',
+            'node_dtrace_header',
+            'node_dtrace_ustack',
+            'node_dtrace_provider',
+          ],
+
+          'variables': {
+            'OBJ_PATH': '<(OBJ_DIR)/node/src',
+            'OBJ_GEN_PATH': '<(OBJ_DIR)/node/gen',
+            'OBJ_TRACING_PATH': '<(OBJ_DIR)/node/src/tracing',
+            'OBJ_SUFFIX': 'o',
+            'OBJ_SEPARATOR': '/',
+            'conditions': [
+              ['OS=="win"', {
+                'OBJ_SUFFIX': 'obj',
+              }],
+              ['GENERATOR=="ninja"', {
+                'OBJ_PATH': '<(OBJ_DIR)/src',
+                'OBJ_GEN_PATH': '<(OBJ_DIR)/gen',
+                'OBJ_TRACING_PATH': '<(OBJ_DIR)/src/tracing',
+                'OBJ_SEPARATOR': '/node.',
+              }, {
+                'conditions': [
+                  ['OS=="win"', {
+                    'OBJ_PATH': '<(OBJ_DIR)/node',
+                    'OBJ_GEN_PATH': '<(OBJ_DIR)/node',
+                    'OBJ_TRACING_PATH': '<(OBJ_DIR)/node',
+                  }],
+                  ['OS=="aix"', {
+                    'OBJ_PATH': '<(OBJ_DIR)/node_base/src',
+                    'OBJ_GEN_PATH': '<(OBJ_DIR)/node_base/gen',
+                    'OBJ_TRACING_PATH': '<(OBJ_DIR)/node_base/src/tracing',
+                  }],
+                ]}
+              ]
+            ],
+           },
+
+          'includes': [
+            'node.gypi'
+          ],
+
+          'include_dirs': [
+            'src',
+            'tools/msvs/genfiles',
+            'deps/v8/include',
+            'deps/cares/include',
+            'deps/uv/include',
+            '<(SHARED_INTERMEDIATE_DIR)', # for node_natives.h
+          ],
+
+          'defines': [ 'NODE_WANT_INTERNALS=1' ],
+
+          'sources': [
+            'test/cctest/node_module_reg.cc',
+            'test/cctest/node_test_fixture.cc',
+            'test/cctest/test_aliased_buffer.cc',
+            'test/cctest/test_base64.cc',
+            'test/cctest/test_environment.cc',
+            'test/cctest/test_util.cc',
+            'test/cctest/test_url.cc'
+          ],
+
+          'sources!': [
+            'src/node_main.cc'
+          ],
+
+          'conditions': [
+            ['node_target_type!="static_library"', {
+              'libraries': [
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)async_wrap.<(OBJ_SUFFIX)',
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)env.<(OBJ_SUFFIX)',
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)node.<(OBJ_SUFFIX)',
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)node_buffer.<(OBJ_SUFFIX)',
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)node_debug_options.<(OBJ_SUFFIX)',
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)node_i18n.<(OBJ_SUFFIX)',
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)node_perf.<(OBJ_SUFFIX)',
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)node_platform.<(OBJ_SUFFIX)',
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)node_url.<(OBJ_SUFFIX)',
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)util.<(OBJ_SUFFIX)',
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)string_bytes.<(OBJ_SUFFIX)',
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)string_search.<(OBJ_SUFFIX)',
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)stream_base.<(OBJ_SUFFIX)',
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)node_constants.<(OBJ_SUFFIX)',
+                '<(OBJ_TRACING_PATH)<(OBJ_SEPARATOR)agent.<(OBJ_SUFFIX)',
+                '<(OBJ_TRACING_PATH)<(OBJ_SEPARATOR)node_trace_buffer.<(OBJ_SUFFIX)',
+                '<(OBJ_TRACING_PATH)<(OBJ_SEPARATOR)node_trace_writer.<(OBJ_SUFFIX)',
+                '<(OBJ_TRACING_PATH)<(OBJ_SEPARATOR)trace_event.<(OBJ_SUFFIX)',
+                '<(OBJ_GEN_PATH)<(OBJ_SEPARATOR)node_javascript.<(OBJ_SUFFIX)',
+              ],
+            }],
+            [ 'node_use_openssl=="true"', {
+              'libraries': [
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)node_crypto.<(OBJ_SUFFIX)',
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)node_crypto_bio.<(OBJ_SUFFIX)',
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)node_crypto_clienthello.<(OBJ_SUFFIX)',
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)tls_wrap.<(OBJ_SUFFIX)',
+              ],
+            }],
+            ['v8_enable_inspector==1', {
+              'sources': [
+                'test/cctest/test_inspector_socket.cc',
+                'test/cctest/test_inspector_socket_server.cc'
+              ],
+              'libraries': [
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)inspector_agent.<(OBJ_SUFFIX)',
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)inspector_io.<(OBJ_SUFFIX)',
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)inspector_js_api.<(OBJ_SUFFIX)',
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)inspector_socket.<(OBJ_SUFFIX)',
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)inspector_socket_server.<(OBJ_SUFFIX)',
+              ],
+              'defines': [
+                'HAVE_INSPECTOR=1',
+              ],
+            }],
+            [ 'node_use_dtrace=="true"', {
+              'libraries': [
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)node_dtrace.<(OBJ_SUFFIX)',
+              ],
+              'conditions': [
+                ['OS!="mac" and OS!="linux"', {
+                  'libraries': [
+                    '<(OBJ_PATH)<(OBJ_SEPARATOR)node_dtrace_provider.<(OBJ_SUFFIX)',
+                    '<(OBJ_PATH)<(OBJ_SEPARATOR)node_dtrace_ustack.<(OBJ_SUFFIX)',
+                  ]
+                }],
+                ['OS=="linux"', {
+                  'libraries': [
+                    '<(SHARED_INTERMEDIATE_DIR)/node_dtrace_provider.o',
+                  ]
+                }],
+              ],
+            }],
+            [ 'OS=="win"', {
+              'libraries': [
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)backtrace_win32.<(OBJ_SUFFIX)',
+               ],
+            }, {
+              'libraries': [
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)backtrace_posix.<(OBJ_SUFFIX)',
+               ],
+            }],
+            [ 'node_shared_zlib=="false"', {
+              'dependencies': [
+                'deps/zlib/zlib.gyp:zlib',
+               ]
+            }],
+            [ 'node_shared_openssl=="false" and node_shared=="false"', {
+              'dependencies': [
+                'deps/openssl/openssl.gyp:openssl'
+              ]
+            }],
+            [ 'node_shared_http_parser=="false"', {
+              'dependencies': [
+                'deps/http_parser/http_parser.gyp:http_parser'
+              ]
+            }],
+            [ 'node_shared_libuv=="false"', {
+              'dependencies': [
+                'deps/uv/uv.gyp:libuv'
+              ]
+            }],
+            [ 'node_shared_nghttp2=="false"', {
+              'dependencies': [
+                'deps/nghttp2/nghttp2.gyp:nghttp2'
+              ],
+              'include_dirs': [
+                'deps/nghttp2/lib/includes'
+              ]
+            }],
+            [ 'node_use_v8_platform=="true"', {
+              'dependencies': [
+                'deps/v8/src/v8.gyp:v8_libplatform',
+              ],
+            }],
+            ['OS=="solaris"', {
+              'ldflags': [ '-I<(SHARED_INTERMEDIATE_DIR)' ]
+            }],
+            [ 'node_use_openssl=="true"', {
+              'conditions': [
+                [ 'node_shared_openssl=="false"', {
+                  'conditions': [
+                    # -force_load or --whole-archive are not applicable for
+                    # the static library
+                    [ 'node_target_type!="static_library"', {
+                      'xcode_settings': {
+                        'OTHER_LDFLAGS': [
+                          '-Wl,-force_load,<(PRODUCT_DIR)/<(OPENSSL_PRODUCT)',
+                        ],
+                      },
+                      'conditions': [
+                        ['OS in "linux freebsd" and node_shared=="false"', {
+                          'ldflags': [
+                            '-Wl,--whole-archive,'
+                                '<(OBJ_DIR)/deps/openssl/'
+                                '<(OPENSSL_PRODUCT)',
+                            '-Wl,--no-whole-archive',
+                          ],
+                        }],
+                      ],
+                    }],
+                  ],
+                }]]
+            }],
+          ]
+        },
+      ], # end targets
+    }], # end node_use_snapshot
   ], # end conditions block
 }
