@@ -196,7 +196,8 @@ Environment::Environment(IsolateData* isolate_data,
 #endif
       handle_cleanup_waiting_(0),
       http_parser_buffer_(nullptr),
-      fs_stats_field_array_(nullptr) {
+      fs_stats_field_array_(fields_array_buffer()->IsUndefined() ? nullptr
+             : reinterpret_cast<double*> (fields_array_buffer()->GetContents().Data())) {
   // We'll be creating new objects so make sure we've entered the context.
   v8::HandleScope handle_scope(isolate());
   v8::Context::Scope context_scope(context);

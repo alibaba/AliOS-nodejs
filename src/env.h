@@ -334,6 +334,8 @@ class ModuleWrap;
   V(vm_parsing_context_symbol, v8::Symbol)                                    \
   V(url_constructor_function, v8::Function)                                   \
   V(write_wrap_constructor_function, v8::Function)                            \
+  V(fields_array_buffer, v8::ArrayBuffer)                                     \
+  V(domain_flag_array_buffer, v8::ArrayBuffer)                                \
   V(tick_info_array_buffer, v8::ArrayBuffer)
 
 class Environment;

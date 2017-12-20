@@ -1,9 +1,3 @@
-#if 0
-#if !(NODE_USE_SNAPSHOT)
-#regor __FILE__ is used only for the snapshot build.
-#endif
-#endif
-
 #include "v8.h"  // NOLINT(build/include_order)
 #include "node.h"
 #include "env.h"
@@ -11,28 +5,11 @@
 #include "module_wrap.h"
 #include "node_javascript.h"
 
-#if 0
-#include "node_buffer.h"
-#include "node_constants.h"
-#include "node_file.h"
-#include "node_http_parser.h"
-#include "node_javascript.h"
-#include "node_version.h"
-#include "node_internals.h"
-#include "node_revert.h"
-#include "node_thread_worker.h"
-#endif
-
 namespace node {
 
 using v8::FunctionCallbackInfo;
 using v8::Value;
 
-#if 0
-namespace util {
-  extern void RegisterExternalReferences(ExternalReferenceRegister* reg);
-}
-#endif
 namespace Buffer {
   extern void RegisterExternalReferences(ExternalReferenceRegister* reg);
 }
@@ -55,29 +32,6 @@ namespace inspector {
   extern void RegisterExternalReferences(ExternalReferenceRegister* reg);
 }
 
-#if 0
-namespace os {
-  extern void RegisterExternalReferences(ExternalReferenceRegister* reg);
-}
-
-namespace url {
-  extern void RegisterExternalReferences(ExternalReferenceRegister* reg);
-}
-
-namespace Wfork {
-  extern void RegisterExternalReferences(ExternalReferenceRegister* reg);
-}
-
-namespace worker {
-  extern void RegisterExternalReferences(ExternalReferenceRegister* reg);
-}
-
-extern void ContextifyRegisterExternalReferences(ExternalReferenceRegister* reg);
-extern void TimerRegisterExternalReferences(ExternalReferenceRegister* reg);
-extern void FileRegisterExternalReferences(ExternalReferenceRegister* reg);
-extern void FSEventRegisterExternalReferences(ExternalReferenceRegister* reg);
-extern void YunosLogRegisterExternalReferences(ExternalReferenceRegister* reg);
-#endif
 extern void NodeRegisterExternalReferences(ExternalReferenceRegister* reg);
 extern void AsyncWrapRegisterExternalReferences(ExternalReferenceRegister* reg);
 extern void ContextifyRegisterExternalReferences(ExternalReferenceRegister* reg);
@@ -102,18 +56,7 @@ void InitExternalReferences(ExternalReferenceRegister* reg, uint8_t* env_addr) {
   url::RegisterExternalReferences(reg);
   inspector::RegisterExternalReferences(reg);
   loader::ModuleWrap::RegisterExternalReferences(reg);
-#if 0
 
-  util::RegisterExternalReferences(reg);
-  Wfork::RegisterExternalReferences(reg);
-  worker::RegisterExternalReferences(reg);
-  ContextifyRegisterExternalReferences(reg);
-  TimerRegisterExternalReferences(reg);
-  FileRegisterExternalReferences(reg);
-  FSEventRegisterExternalReferences(reg);
-  YunosLogRegisterExternalReferences(reg);
-
-#endif
   size_t length;
   v8::String::ExternalStringResourceBase** resources = NativeSourceResources(&length);
   for (size_t i = 0; i < length; ++i) {

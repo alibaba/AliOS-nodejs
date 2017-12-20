@@ -3200,6 +3200,7 @@ void SetupProcessObject(Environment* env,
       process_env_template->NewInstance(env->context()).ToLocalChecked();
   process->Set(FIXED_ONE_BYTE_STRING(env->isolate(), "env"), process_env);
 
+  READONLY_PROPERTY(process, "features", GetFeatures(env));
   CHECK(process->SetAccessor(env->context(),
                              FIXED_ONE_BYTE_STRING(env->isolate(), "ppid"),
                              GetParentProcessId).FromJust());
