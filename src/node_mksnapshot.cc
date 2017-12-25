@@ -28,6 +28,7 @@
 #include "node_revert.h"
 #include "node_debug_options.h"
 #include "node_perf.h"
+#include "tty_wrap.h"
 
 #include "node_external_refs.h"
 
@@ -2626,7 +2627,6 @@ static void Binding(const FunctionCallbackInfo<Value>& args) {
   char buf[1024];
   node::Utf8Value module_v(env->isolate(), module);
   snprintf(buf, sizeof(buf), "Binding %s", *module_v);
-  printf("%s: %s\n", __FUNCTION__, buf);
 
   Local<Array> modules = env->module_load_list_array();
   uint32_t l = modules->Length();
@@ -4345,15 +4345,32 @@ void FreeIsolateData(IsolateData* isolate_data) {
 }
 
 static v8::StartupData SerializeInternalFields(Local<Object> holder, int index, void* data) {
+  HandleScope scope(holder->GetIsolate());
+  Local<String> name = holder->GetConstructorName();
+  char buffer[128];
+  name->WriteUtf8(buffer);
+
   // FIXME: check holder
   void* value = holder->GetAlignedPointerFromInternalField(index);
-  if (value == nullptr) {
+  if (strcmp(buffer, "TTY") == 0) {
+    CHECK(value);
+    TTYWrap* wrapper = reinterpret_cast<TTYWrap*>(value);
+    int* data = new int[2];
+    data[0] =  wrapper->fd();
+    data[1] =  wrapper->readable();
+    StartupData d = {reinterpret_cast<const char*> (data), 2 * sizeof(int) };
+    return d;
+  } else if (strcmp(buffer, "Signal") == 0) {
+    CHECK(value);
+    StartupData d = {reinterpret_cast<const char*> (0), 0};
+    return d;
+  } else if (strcmp(buffer, "ChannelWrap") == 0) {
+    CHECK(value);
     StartupData d = {reinterpret_cast<const char*> (0), 0};
     return d;
   } else {
-    char* raw_data = reinterpret_cast<char*> (new (void*));
-    memcpy(raw_data, value, sizeof(void*));
-    StartupData d = {const_cast<const char*> (raw_data), sizeof(void*)};
+    CHECK_EQ(value, nullptr);
+    StartupData d = {reinterpret_cast<const char*> (0), 0};
     return d;
   }
 }
@@ -4395,25 +4412,36 @@ static Local<Context> CreateNodeContext(IsolateData* isolate_data,
 
 class NodePersistentHandleVisitor : public v8::PersistentHandleVisitor {
   public:
-    NodePersistentHandleVisitor(SnapshotCreator* creator, size_t ctx_idx) :
+    NodePersistentHandleVisitor(SnapshotCreator* creator, size_t ctx_idx, ExternalReferenceRegister* reg) :
       creator_(creator),
-      ctx_idx_(ctx_idx) {
+      ctx_idx_(ctx_idx),
+      reg_(reg) {
     }
 
     virtual void VisitPersistentHandle(v8::Persistent<Value>* value,
         uint16_t class_id) override {
-      Local<Value> data = PersistentToLocal(creator_->GetIsolate(), *value).As<Value>();
-      creator_->AddContextAwareGlobalHandle(data,
-          ctx_idx_);
+      if (class_id == (NODE_ASYNC_ID_OFFSET + AsyncWrap::PROVIDER_DNSCHANNEL) ||
+          class_id == (NODE_ASYNC_ID_OFFSET + AsyncWrap::PROVIDER_TTYWRAP) ||
+          class_id == (NODE_ASYNC_ID_OFFSET + AsyncWrap::PROVIDER_SIGNALWRAP)) {
+        Local<Object> holder = PersistentToLocal(creator_->GetIsolate(), *value)->ToObject(creator_->GetIsolate());
+        creator_->AddContextAwareGlobalHandle(holder, ctx_idx_);
+
+        /*
+        intptr_t wrapper = reinterpret_cast<intptr_t>(holder->GetAlignedPointerFromInternalField(0));
+        reg_->add(wrapper);
+        */
+      }
     }
   private:
     v8::SnapshotCreator* creator_;
     size_t ctx_idx_;
+    ExternalReferenceRegister* reg_;
 };
 
 static void AddGlobalHandles(Environment* env,
                              SnapshotCreator* creator,
-                             size_t ctx_idx) {
+                             size_t ctx_idx,
+                             ExternalReferenceRegister* reg) {
   Isolate* isolate = creator->GetIsolate();
   AsyncHooks* async_hooks = env->async_hooks();
   Local<Primitive> undefined = Undefined(isolate);
@@ -4466,7 +4494,7 @@ static void AddGlobalHandles(Environment* env,
   creator->AddContextAwareGlobalHandle(env->scheduled_immediate_count().GetJSArray(),
                                        ctx_idx);
 
-  NodePersistentHandleVisitor visitor(creator, ctx_idx);
+  NodePersistentHandleVisitor visitor(creator, ctx_idx, reg);
   isolate->VisitHandlesWithClassIds(&visitor);
 }
 
@@ -4475,10 +4503,9 @@ static void MkSnapshot(int argc, const char* const* argv,
   uint8_t* env_addr = new uint8_t[sizeof(Environment)];
   ExternalReferenceRegister reg;
   InitExternalReferences(&reg, env_addr);
-  intptr_t* external_references = reg.external_references();
 
   ArrayBufferAllocator allocator;
-  SnapshotCreator creator(external_references);
+  SnapshotCreator creator;
   Isolate* isolate = creator.GetIsolate();
   {
     HandleScope handle_scope(isolate);
@@ -4497,10 +4524,11 @@ static void MkSnapshot(int argc, const char* const* argv,
                                                 exec_argv, isolate, env_addr);
     size_t ctx_idx = creator.AddContext(node_ctx,
         v8::SerializeInternalFieldsCallback(SerializeInternalFields, env_addr));
-    AddGlobalHandles(reinterpret_cast<Environment*> (env_addr), &creator, ctx_idx);
+    AddGlobalHandles(reinterpret_cast<Environment*> (env_addr), &creator, ctx_idx, &reg);
   }
 
-  StartupData startup = creator.CreateBlob(SnapshotCreator::FunctionCodeHandling::kClear);
+  intptr_t* external_references = reg.external_references();
+  StartupData startup = creator.CreateBlob(SnapshotCreator::FunctionCodeHandling::kClear, external_references);
   {
     SnapshotWriter writer;
     if (v8::internal::FLAG_startup_src) writer.SetSnapshotFile(v8::internal::FLAG_startup_src);

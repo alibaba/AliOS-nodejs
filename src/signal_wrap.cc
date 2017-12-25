@@ -131,6 +131,9 @@ void SignalRegisterExternalReferences(ExternalReferenceRegister* reg) {
   reg->add(SignalWrap::Stop);
 }
 
+void NewSignalWrap(Environment* env, Local<Object> object) {
+  new SignalWrap(env, object);
+}
 
 }  // namespace node
 

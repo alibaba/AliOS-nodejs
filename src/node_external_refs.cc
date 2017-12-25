@@ -78,13 +78,13 @@ void InitExternalReferences(ExternalReferenceRegister* reg, uint8_t* env_addr) {
     reg->add(reinterpret_cast<intptr_t> (resources[i]));
   }
 
-  reg->add(NULL);
 }
 
 uint8_t* SetupExternalReferences(v8::Isolate::CreateParams* params) {
   uint8_t* env_addr = new uint8_t[sizeof(Environment)];
   ExternalReferenceRegister reg;
   InitExternalReferences(&reg, env_addr);
+  reg.add(NULL);
 
   params->external_references = reg.external_references();
   return env_addr;

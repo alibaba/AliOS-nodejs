@@ -162,6 +162,7 @@ using v8::Null;
 using v8::Number;
 using v8::Object;
 using v8::ObjectTemplate;
+using v8::Persistent;
 using v8::Promise;
 using v8::PromiseRejectMessage;
 using v8::PropertyCallbackInfo;
@@ -175,6 +176,13 @@ using v8::V8;
 using v8::Value;
 
 using AsyncHooks = node::Environment::AsyncHooks;
+
+  namespace cares_wrap {
+    extern void NewChannelWrap(Environment* env, Local<Object> object);
+  }
+extern void NewTTYWrap(Environment* env, Local<Object> object, int fd, bool readable);
+extern void NewSignalWrap(Environment* env, Local<Object> object);
+
 
 static bool print_eval = false;
 static bool force_repl = false;
@@ -4681,6 +4689,26 @@ inline int Start(Isolate* isolate, IsolateData* isolate_data,
 }
 
 void DeserializeInternalFields(Local<Object> holder, int index, v8::StartupData payload, void* data) {
+  HandleScope scope(holder->GetIsolate());
+  Local<String> name = holder->GetConstructorName();
+  char buffer[128];
+  name->WriteUtf8(buffer);
+
+  Persistent<Object>* global_consoles = reinterpret_cast<Persistent<Object>*>(data);
+
+  if (strcmp(buffer, "TTY") == 0) {
+    CHECK_EQ(payload.raw_size, 2 * sizeof(int));
+    int* data = new int[2];
+    memcpy(data, payload.data, payload.raw_size);
+
+    int fd = data[0];
+    global_consoles[fd].Reset(holder->GetIsolate(), holder);
+  } else if (strcmp(buffer, "Signal") == 0) {
+    global_consoles[3].Reset(holder->GetIsolate(), holder);
+  } else if (strcmp(buffer, "ChannelWrap") == 0) {
+    global_consoles[4].Reset(holder->GetIsolate(), holder);
+  } else {
+  }
 }
 
 static void StartEnvFromSnapshot(Environment* env, int argc, const char* const* argv,
@@ -4747,8 +4775,12 @@ inline int StartFromSnapshot(Isolate* isolate, uint8_t* env_addr, uv_loop_t* eve
                  int argc, const char* const* argv,
                  int exec_argc, const char* const* exec_argv) {
   HandleScope handle_scope(isolate);
+  // 0,1, 2 tty
+  // 3, signal
+  // 4, channel
+  Persistent<Object> global_consoles[5];
   Local<Context> context = Context::FromSnapshot(isolate, 0,
-      v8::DeserializeInternalFieldsCallback(DeserializeInternalFields))
+      v8::DeserializeInternalFieldsCallback(DeserializeInternalFields, global_consoles))
       .ToLocalChecked();
   Context::Scope context_scope(context);
 
@@ -4779,6 +4811,10 @@ inline int StartFromSnapshot(Isolate* isolate, uint8_t* env_addr, uv_loop_t* eve
   {
     Environment::AsyncCallbackScope callback_scope(env);
     env->async_hooks()->push_async_ids(1, 0);
+    NewTTYWrap(env, global_consoles[1].Get(isolate), 1, false);
+    NewTTYWrap(env, global_consoles[2].Get(isolate), 2, false);
+    NewSignalWrap(env, global_consoles[3].Get(isolate));
+    cares_wrap::NewChannelWrap(env, global_consoles[4].Get(isolate));
     RunEntry(env);
     env->async_hooks()->pop_async_id(1);
   }
@@ -4836,6 +4872,7 @@ inline int Start(uv_loop_t* event_loop,
   uint8_t* env_addr = new uint8_t[sizeof(Environment)];
   ExternalReferenceRegister reg;
   InitExternalReferences(&reg, env_addr);
+  reg.add(NULL);
 
   params.external_references = reg.external_references();
 

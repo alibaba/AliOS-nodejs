@@ -171,7 +171,9 @@ TTYWrap::TTYWrap(Environment* env,
     : LibuvStreamWrap(env,
                       object,
                       reinterpret_cast<uv_stream_t*>(&handle_),
-                      AsyncWrap::PROVIDER_TTYWRAP) {
+                      AsyncWrap::PROVIDER_TTYWRAP),
+      fd_(fd),
+      readable_(readable) {
   *init_err = uv_tty_init(env->event_loop(), &handle_, fd, readable);
 }
 
@@ -181,6 +183,11 @@ void TTYRegisterExternalReferences(ExternalReferenceRegister* reg) {
   reg->add(TTYWrap::SetRawMode);
   reg->add(TTYWrap::IsTTY);
   reg->add(TTYWrap::GuessHandleType);
+}
+
+void NewTTYWrap(Environment* env, Local<Object> object, int fd, bool readable) {
+  int err;
+  new TTYWrap(env, object, fd, readable, &err);
 }
 
 }  // namespace node

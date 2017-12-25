@@ -2288,6 +2288,10 @@ void RegisterExternalReferences(ExternalReferenceRegister* reg) {
   reg->add(is_construct_call_callback);
 }
 
+void NewChannelWrap(Environment* env, Local<Object> object) {
+  new ChannelWrap(env, object);
+}
+
 }  // namespace cares_wrap
 }  // namespace node
 

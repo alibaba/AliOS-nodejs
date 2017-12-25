@@ -40,6 +40,8 @@ class TTYWrap : public LibuvStreamWrap {
   uv_tty_t* UVHandle();
 
   size_t self_size() const override { return sizeof(*this); }
+  int fd() const { return fd_; }
+  bool readable() const { return readable_; }
 
  private:
   TTYWrap(Environment* env,
@@ -55,8 +57,11 @@ class TTYWrap : public LibuvStreamWrap {
   static void New(const v8::FunctionCallbackInfo<v8::Value>& args);
 
   uv_tty_t handle_;
+  int fd_;
+  bool readable_;
 
   friend void TTYRegisterExternalReferences(ExternalReferenceRegister* reg);
+  friend void NewTTYWrap(Environment* env, v8::Local<v8::Object> object, int fd, bool readable);
 };
 
 }  // namespace node
