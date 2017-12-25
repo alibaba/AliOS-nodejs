@@ -8243,8 +8243,7 @@ class V8_EXPORT SnapshotCreator {
    * \param external_references a null-terminated array of external references
    *        that must be equivalent to CreateParams::external_references.
    */
-  SnapshotCreator(const intptr_t* external_references = nullptr,
-                  StartupData* existing_blob = nullptr);
+  SnapshotCreator(StartupData* existing_blob = nullptr);
 
   ~SnapshotCreator();
 
@@ -8298,7 +8297,8 @@ class V8_EXPORT SnapshotCreator {
    * \returns { nullptr, 0 } on failure, and a startup snapshot on success. The
    *        caller acquires ownership of the data array in the return value.
    */
-  StartupData CreateBlob(FunctionCodeHandling function_code_handling);
+  StartupData CreateBlob(FunctionCodeHandling function_code_handling,
+                         const intptr_t* external_references = nullptr);
 
   // Disallow copying and assigning.
   SnapshotCreator(const SnapshotCreator&) = delete;

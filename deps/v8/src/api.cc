@@ -582,14 +582,13 @@ struct SnapshotCreatorData {
 
 }  // namespace
 
-SnapshotCreator::SnapshotCreator(const intptr_t* external_references,
-                                 StartupData* existing_snapshot) {
+SnapshotCreator::SnapshotCreator(StartupData* existing_snapshot) {
   i::Isolate* internal_isolate = new i::Isolate(true);
   Isolate* isolate = reinterpret_cast<Isolate*>(internal_isolate);
   SnapshotCreatorData* data = new SnapshotCreatorData(isolate);
   data->isolate_ = isolate;
   internal_isolate->set_array_buffer_allocator(&data->allocator_);
-  internal_isolate->set_api_external_references(external_references);
+  internal_isolate->set_api_external_references(NULL);
   isolate->Enter();
   const StartupData* blob = existing_snapshot
                                 ? existing_snapshot
@@ -736,12 +735,15 @@ size_t SnapshotCreator::AddContextAwareEternalHandle(Local<Data> handle,
   return index;
 }
 
-StartupData SnapshotCreator::CreateBlob(
-    SnapshotCreator::FunctionCodeHandling function_code_handling) {
+StartupData SnapshotCreator::CreateBlob(SnapshotCreator::FunctionCodeHandling function_code_handling,
+    const intptr_t* external_references) {
   SnapshotCreatorData* data = SnapshotCreatorData::cast(data_);
   i::Isolate* isolate = reinterpret_cast<i::Isolate*>(data->isolate_);
   DCHECK(!data->created_);
   DCHECK(!data->default_context_.IsEmpty());
+  DCHECK(!isolate->api_external_references());
+  DCHECK(!isolate->external_reference_map());
+  isolate->set_api_external_references(external_references);
 
   int num_additional_contexts = static_cast<int>(data->contexts_.Size());
 
@@ -933,7 +935,7 @@ StartupData V8::WarmUpSnapshotDataBlob(StartupData cold_snapshot_blob,
   base::ElapsedTimer timer;
   timer.Start();
   {
-    SnapshotCreator snapshot_creator(nullptr, &cold_snapshot_blob);
+    SnapshotCreator snapshot_creator(&cold_snapshot_blob);
     Isolate* isolate = snapshot_creator.GetIsolate();
     {
       HandleScope scope(isolate);
