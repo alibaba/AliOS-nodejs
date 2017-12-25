@@ -85,6 +85,24 @@ void StreamBase::AddMethods(Environment* env,
 
 
 template <class Base>
+void StreamBase::RegisterExternalReferences(ExternalReferenceRegister* reg) {
+  reg->add(GetFD<Base>);
+  reg->add(GetExternal<Base>);
+  reg->add(GetBytesRead<Base>);
+
+  reg->add(JSMethod<Base, &StreamBase::ReadStart>);
+  reg->add(JSMethod<Base, &StreamBase::ReadStop>);
+  reg->add(JSMethod<Base, &StreamBase::Shutdown>);
+  reg->add(JSMethod<Base, &StreamBase::Writev>);
+  reg->add(JSMethod<Base, &StreamBase::WriteBuffer>);
+  reg->add(JSMethod<Base, &StreamBase::WriteString<ASCII> >);
+  reg->add(JSMethod<Base, &StreamBase::WriteString<UTF8> >);
+  reg->add(JSMethod<Base, &StreamBase::WriteString<UCS2> >);
+  reg->add(JSMethod<Base, &StreamBase::WriteString<LATIN1> >);
+}
+
+
+template <class Base>
 void StreamBase::GetFD(Local<String> key,
                        const PropertyCallbackInfo<Value>& args) {
   // Mimic implementation of StreamBase::GetFD() and UDPWrap::GetFD().

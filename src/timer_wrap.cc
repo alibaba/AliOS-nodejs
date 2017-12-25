@@ -23,6 +23,7 @@
 #include "env-inl.h"
 #include "handle_wrap.h"
 #include "util-inl.h"
+#include "node_external_refs.h"
 
 #include <stdint.h>
 
@@ -71,7 +72,7 @@ class TimerWrap : public HandleWrap {
 
   size_t self_size() const override { return sizeof(*this); }
 
- private:
+ public:
   static void New(const FunctionCallbackInfo<Value>& args) {
     // This constructor should not be exposed to public javascript.
     // Therefore we assert that we are not trying to call this as a
@@ -130,10 +131,19 @@ class TimerWrap : public HandleWrap {
   }
 
   uv_timer_t handle_;
+  friend void TimerWrapRegisterExternalReferences(ExternalReferenceRegister* reg);
 };
 
 
 }  // anonymous namespace
+
+void TimerWrapRegisterExternalReferences(ExternalReferenceRegister* reg) {
+    reg->add(TimerWrap::New);
+    reg->add(TimerWrap::Now);
+    reg->add(TimerWrap::Start);
+    reg->add(TimerWrap::Stop);
+}
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(timer_wrap, node::TimerWrap::Initialize)

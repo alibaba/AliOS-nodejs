@@ -2626,6 +2626,7 @@ static void Binding(const FunctionCallbackInfo<Value>& args) {
   char buf[1024];
   node::Utf8Value module_v(env->isolate(), module);
   snprintf(buf, sizeof(buf), "Binding %s", *module_v);
+  printf("%s: %s\n", __FUNCTION__, buf);
 
   Local<Array> modules = env->module_load_list_array();
   uint32_t l = modules->Length();
@@ -4391,6 +4392,25 @@ static Local<Context> CreateNodeContext(IsolateData* isolate_data,
   return handle_scope.Escape(context);
 }
 
+
+class NodePersistentHandleVisitor : public v8::PersistentHandleVisitor {
+  public:
+    NodePersistentHandleVisitor(SnapshotCreator* creator, size_t ctx_idx) :
+      creator_(creator),
+      ctx_idx_(ctx_idx) {
+    }
+
+    virtual void VisitPersistentHandle(v8::Persistent<Value>* value,
+        uint16_t class_id) override {
+      Local<Value> data = PersistentToLocal(creator_->GetIsolate(), *value).As<Value>();
+      creator_->AddContextAwareGlobalHandle(data,
+          ctx_idx_);
+    }
+  private:
+    v8::SnapshotCreator* creator_;
+    size_t ctx_idx_;
+};
+
 static void AddGlobalHandles(Environment* env,
                              SnapshotCreator* creator,
                              size_t ctx_idx) {
@@ -4445,6 +4465,9 @@ static void AddGlobalHandles(Environment* env,
                                        ctx_idx);
   creator->AddContextAwareGlobalHandle(env->scheduled_immediate_count().GetJSArray(),
                                        ctx_idx);
+
+  NodePersistentHandleVisitor visitor(creator, ctx_idx);
+  isolate->VisitHandlesWithClassIds(&visitor);
 }
 
 static void MkSnapshot(int argc, const char* const* argv,

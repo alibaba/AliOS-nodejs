@@ -28,6 +28,7 @@
 #include "req_wrap-inl.h"
 #include "stream_wrap.h"
 #include "util-inl.h"
+#include "node_external_refs.h"
 
 namespace node {
 
@@ -172,6 +173,14 @@ TTYWrap::TTYWrap(Environment* env,
                       reinterpret_cast<uv_stream_t*>(&handle_),
                       AsyncWrap::PROVIDER_TTYWRAP) {
   *init_err = uv_tty_init(env->event_loop(), &handle_, fd, readable);
+}
+
+void TTYRegisterExternalReferences(ExternalReferenceRegister* reg) {
+  reg->add(TTYWrap::New);
+  reg->add(TTYWrap::GetWindowSize);
+  reg->add(TTYWrap::SetRawMode);
+  reg->add(TTYWrap::IsTTY);
+  reg->add(TTYWrap::GuessHandleType);
 }
 
 }  // namespace node

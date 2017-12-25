@@ -63,6 +63,8 @@ class TCPWrap : public ConnectionWrap<TCPWrap, uv_tcp_t> {
   static void SetSimultaneousAccepts(
       const v8::FunctionCallbackInfo<v8::Value>& args);
 #endif
+
+  friend void TCPRegisterExternalReferences(ExternalReferenceRegister* reg);
 };
 
 

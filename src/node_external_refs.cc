@@ -33,17 +33,23 @@ namespace inspector {
 }
 
 extern void NodeRegisterExternalReferences(ExternalReferenceRegister* reg);
-extern void AsyncWrapRegisterExternalReferences(ExternalReferenceRegister* reg);
 extern void ContextifyRegisterExternalReferences(ExternalReferenceRegister* reg);
 extern void FSRegisterExternalReferences(ExternalReferenceRegister* reg);
 extern void FSEventWrapRegisterExternalReferences(ExternalReferenceRegister* reg);
 extern void UVRegisterExternalReferences(ExternalReferenceRegister* reg);
+extern void HandleWrapRegisterExternalReferences(ExternalReferenceRegister* reg);
+extern void AsyncWrapRegisterExternalReferences(ExternalReferenceRegister* reg);
+extern void StreamRegisterExternalReferences(ExternalReferenceRegister* reg);
+extern void TTYRegisterExternalReferences(ExternalReferenceRegister* reg);
+extern void SignalRegisterExternalReferences(ExternalReferenceRegister* reg);
+extern void TimerWrapRegisterExternalReferences(ExternalReferenceRegister* reg);
+extern void TCPRegisterExternalReferences(ExternalReferenceRegister* reg);
+extern void PipeRegisterExternalReferences(ExternalReferenceRegister* reg);
 
 void InitExternalReferences(ExternalReferenceRegister* reg, uint8_t* env_addr) {
   reg->add(reinterpret_cast<intptr_t> (env_addr));
 
   NodeRegisterExternalReferences(reg);
-  AsyncWrapRegisterExternalReferences(reg);
   Buffer::RegisterExternalReferences(reg);
   cares_wrap::RegisterExternalReferences(reg);
   ContextifyRegisterExternalReferences(reg);
@@ -56,6 +62,15 @@ void InitExternalReferences(ExternalReferenceRegister* reg, uint8_t* env_addr) {
   url::RegisterExternalReferences(reg);
   inspector::RegisterExternalReferences(reg);
   loader::ModuleWrap::RegisterExternalReferences(reg);
+
+  HandleWrapRegisterExternalReferences(reg);
+  AsyncWrapRegisterExternalReferences(reg);
+  StreamRegisterExternalReferences(reg);
+  TTYRegisterExternalReferences(reg);
+  SignalRegisterExternalReferences(reg);
+  TimerWrapRegisterExternalReferences(reg);
+  TCPRegisterExternalReferences(reg);
+  PipeRegisterExternalReferences(reg);
 
   size_t length;
   v8::String::ExternalStringResourceBase** resources = NativeSourceResources(&length);

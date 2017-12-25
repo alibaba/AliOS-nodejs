@@ -24,6 +24,7 @@
 #include "env-inl.h"
 #include "util-inl.h"
 #include "node.h"
+#include "node_external_refs.h"
 
 namespace node {
 
@@ -124,5 +125,11 @@ void HandleWrap::OnClose(uv_handle_t* handle) {
   delete wrap;
 }
 
+void HandleWrapRegisterExternalReferences(ExternalReferenceRegister* reg) {
+  reg->add(HandleWrap::Close);
+  reg->add(HandleWrap::Unref);
+  reg->add(HandleWrap::Ref);
+  reg->add(HandleWrap::HasRef);
+}
 
 }  // namespace node

@@ -31,6 +31,7 @@
 #include "connect_wrap.h"
 #include "stream_wrap.h"
 #include "util-inl.h"
+#include "node_external_refs.h"
 
 namespace node {
 
@@ -59,6 +60,11 @@ Local<Object> PipeWrap::Instantiate(Environment* env, AsyncWrap* parent) {
   return handle_scope.Escape(instance);
 }
 
+  // Create FunctionTemplate for PipeConnectWrap.
+  static void constructor (const FunctionCallbackInfo<Value>& args) {
+    CHECK(args.IsConstructCall());
+    ClearWrap(args.This());
+  };
 
 void PipeWrap::Initialize(Local<Object> target,
                           Local<Value> unused,
@@ -95,11 +101,6 @@ void PipeWrap::Initialize(Local<Object> target,
   target->Set(pipeString, t->GetFunction());
   env->set_pipe_constructor_template(t);
 
-  // Create FunctionTemplate for PipeConnectWrap.
-  auto constructor = [](const FunctionCallbackInfo<Value>& args) {
-    CHECK(args.IsConstructCall());
-    ClearWrap(args.This());
-  };
   auto cwt = FunctionTemplate::New(env->isolate(), constructor);
   cwt->InstanceTemplate()->SetInternalFieldCount(1);
   AsyncWrap::AddWrapMethods(env, cwt);
@@ -201,6 +202,19 @@ void PipeWrap::Connect(const FunctionCallbackInfo<Value>& args) {
   args.GetReturnValue().Set(0);  // uv_pipe_connect() doesn't return errors.
 }
 
+void PipeRegisterExternalReferences(ExternalReferenceRegister* reg) {
+  reg->add(PipeWrap::New);
+  reg->add(PipeWrap::Bind);
+  reg->add(PipeWrap::Listen);
+  reg->add(PipeWrap::Connect);
+  reg->add(PipeWrap::Open);
+
+#ifdef _WIN32
+  reg->add(PipeWrap::SetPendingInstances);
+#endif
+
+  reg->add(constructor);
+}
 
 }  // namespace node
 

@@ -26,6 +26,7 @@
 #include "handle_wrap.h"
 #include "node_buffer.h"
 #include "node_counters.h"
+#include "node_external_refs.h"
 #include "pipe_wrap.h"
 #include "req_wrap-inl.h"
 #include "tcp_wrap.h"
@@ -49,17 +50,16 @@ using v8::Local;
 using v8::Object;
 using v8::Value;
 
+  static void is_construct_call_callback (const FunctionCallbackInfo<Value>& args) {
+    CHECK(args.IsConstructCall());
+    ClearWrap(args.This());
+  };
 
 void LibuvStreamWrap::Initialize(Local<Object> target,
                                  Local<Value> unused,
                                  Local<Context> context) {
   Environment* env = Environment::GetCurrent(context);
 
-  auto is_construct_call_callback =
-      [](const FunctionCallbackInfo<Value>& args) {
-    CHECK(args.IsConstructCall());
-    ClearWrap(args.This());
-  };
   Local<FunctionTemplate> sw =
       FunctionTemplate::New(env->isolate(), is_construct_call_callback);
   sw->InstanceTemplate()->SetInternalFieldCount(1);
@@ -394,6 +394,14 @@ void LibuvStreamWrap::AfterWrite(uv_write_t* req, int status) {
 void LibuvStreamWrap::OnAfterWriteImpl(WriteWrap* w, void* ctx) {
   LibuvStreamWrap* wrap = static_cast<LibuvStreamWrap*>(ctx);
   wrap->UpdateWriteQueueSize();
+}
+
+void StreamRegisterExternalReferences(ExternalReferenceRegister* reg) {
+  reg->add(is_construct_call_callback);
+  reg->add(LibuvStreamWrap::UpdateWriteQueueSize);
+  reg->add(LibuvStreamWrap::SetBlocking);
+
+  StreamBase::RegisterExternalReferences<LibuvStreamWrap>(reg);
 }
 
 }  // namespace node

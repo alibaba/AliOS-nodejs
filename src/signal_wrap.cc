@@ -24,6 +24,7 @@
 #include "handle_wrap.h"
 #include "util-inl.h"
 #include "v8.h"
+#include "node_external_refs.h"
 
 namespace node {
 
@@ -64,7 +65,7 @@ class SignalWrap : public HandleWrap {
 
   size_t self_size() const override { return sizeof(*this); }
 
- private:
+ public:
   static void New(const FunctionCallbackInfo<Value>& args) {
     // This constructor should not be exposed to public javascript.
     // Therefore we assert that we are not trying to call this as a
@@ -119,10 +120,18 @@ class SignalWrap : public HandleWrap {
   }
 
   uv_signal_t handle_;
+  friend void SignalRegisterExternalReferences(ExternalReferenceRegister* reg);
 };
 
-
 }  // anonymous namespace
+
+void SignalRegisterExternalReferences(ExternalReferenceRegister* reg) {
+  reg->add(SignalWrap::New);
+  reg->add(SignalWrap::Start);
+  reg->add(SignalWrap::Stop);
+}
+
+
 }  // namespace node
 
 

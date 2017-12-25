@@ -30,6 +30,7 @@
 #include "handle_wrap.h"
 #include "string_bytes.h"
 #include "v8.h"
+#include "node_external_refs.h"
 
 namespace node {
 
@@ -115,6 +116,8 @@ class LibuvStreamWrap : public HandleWrap, public StreamBase {
                          void* ctx);
 
   uv_stream_t* const stream_;
+
+  friend void StreamRegisterExternalReferences(ExternalReferenceRegister* reg);
 };
 
 

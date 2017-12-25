@@ -8,6 +8,7 @@
 #include "req_wrap-inl.h"
 #include "node.h"
 #include "util.h"
+#include "node_external_refs.h"
 
 #include "v8.h"
 
@@ -230,6 +231,8 @@ class StreamBase : public StreamResource {
   static inline void AddMethods(Environment* env,
                                 v8::Local<v8::FunctionTemplate> target,
                                 int flags = kFlagNone);
+  template <class Base>
+  static inline void RegisterExternalReferences(ExternalReferenceRegister* reg);
 
   virtual void* Cast() = 0;
   virtual bool IsAlive() = 0;

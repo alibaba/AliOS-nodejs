@@ -27,6 +27,7 @@
 #include "env.h"
 #include "uv.h"
 #include "stream_wrap.h"
+#include "node_external_refs.h"
 
 namespace node {
 
@@ -54,6 +55,8 @@ class TTYWrap : public LibuvStreamWrap {
   static void New(const v8::FunctionCallbackInfo<v8::Value>& args);
 
   uv_tty_t handle_;
+
+  friend void TTYRegisterExternalReferences(ExternalReferenceRegister* reg);
 };
 
 }  // namespace node

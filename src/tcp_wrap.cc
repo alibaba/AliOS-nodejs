@@ -29,6 +29,7 @@
 #include "connect_wrap.h"
 #include "stream_wrap.h"
 #include "util-inl.h"
+#include "node_external_refs.h"
 
 #include <stdlib.h>
 
@@ -62,6 +63,11 @@ Local<Object> TCPWrap::Instantiate(Environment* env, AsyncWrap* parent) {
   return handle_scope.Escape(instance);
 }
 
+  // Create FunctionTemplate for TCPConnectWrap.
+  static void constructor (const FunctionCallbackInfo<Value>& args) {
+    CHECK(args.IsConstructCall());
+    ClearWrap(args.This());
+  };
 
 void TCPWrap::Initialize(Local<Object> target,
                          Local<Value> unused,
@@ -110,11 +116,6 @@ void TCPWrap::Initialize(Local<Object> target,
   target->Set(tcpString, t->GetFunction());
   env->set_tcp_constructor_template(t);
 
-  // Create FunctionTemplate for TCPConnectWrap.
-  auto constructor = [](const FunctionCallbackInfo<Value>& args) {
-    CHECK(args.IsConstructCall());
-    ClearWrap(args.This());
-  };
   auto cwt = FunctionTemplate::New(env->isolate(), constructor);
   cwt->InstanceTemplate()->SetInternalFieldCount(1);
   AsyncWrap::AddWrapMethods(env, cwt);
@@ -357,6 +358,25 @@ Local<Object> AddressToJS(Environment* env,
   return scope.Escape(info);
 }
 
+void TCPRegisterExternalReferences(ExternalReferenceRegister* reg) {
+  reg->add(TCPWrap::New);
+  reg->add(TCPWrap::Open);
+  reg->add(TCPWrap::Bind);
+  reg->add(TCPWrap::Listen);
+  reg->add(TCPWrap::Connect);
+  reg->add(TCPWrap::Bind6);
+  reg->add(TCPWrap::Connect6);
+  reg->add(GetSockOrPeerName<TCPWrap, uv_tcp_getsockname>);
+  reg->add(GetSockOrPeerName<TCPWrap, uv_tcp_getpeername>);
+  reg->add(TCPWrap::SetNoDelay);
+  reg->add(TCPWrap::SetKeepAlive);
+
+#ifdef _WIN32
+  reg->add(TCPWrap::SetSimultaneousAccepts);
+#endif
+
+  reg->add(constructor);
+}
 
 }  // namespace node
 
