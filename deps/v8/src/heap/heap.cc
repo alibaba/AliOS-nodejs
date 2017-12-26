@@ -3043,6 +3043,7 @@ void Heap::CreateInitialObjects() {
   cell->set_value(Smi::FromInt(Isolate::kProtectorValid));
   set_array_buffer_neutering_protector(*cell);
 
+  set_serialized_non_local_handles(empty_fixed_array());
   set_serialized_templates(empty_fixed_array());
   set_serialized_global_proxy_sizes(empty_fixed_array());
 
@@ -5398,7 +5399,7 @@ void Heap::IterateStrongRoots(RootVisitor* v, VisitMode mode) {
   // Iterate over eternal handles.
   if (isMinorGC) {
     isolate_->eternal_handles()->IterateNewSpaceRoots(v);
-  } else {
+  } else if (mode != VISIT_ONLY_STRONG_FOR_SERIALIZATION) {
     isolate_->eternal_handles()->IterateAllRoots(v);
   }
   v->Synchronize(VisitorSynchronization::kEternalHandles);

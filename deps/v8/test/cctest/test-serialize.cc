@@ -2467,6 +2467,82 @@ TEST(SnapshotCreatorTemplates) {
   delete[] blob.data;
 }
 
+TEST(SnapshotCreatorNonLocalHandles) {
+  DisableAlwaysOpt();
+  v8::StartupData blob;
+
+  {
+    v8::SnapshotCreator creator(original_external_references);
+    v8::Isolate* isolate = creator.GetIsolate();
+
+    v8::Persistent<v8::String> persistent_object;
+    v8::Global<v8::String> global_object;
+    v8::Eternal<v8::String> eternal_object;
+    {
+      v8::HandleScope handle_scope(isolate);
+      v8::Local<v8::String> local = v8::Local<v8::String>::New(isolate, v8_str("str"));
+
+      persistent_object.Reset(isolate, local);
+      global_object.Reset(isolate, local);
+      eternal_object.Set(isolate, local);
+
+      v8::Local<v8::Context> context = v8::Context::New(isolate);
+
+      {
+        v8::Data* non_local_handles[] = { *(persistent_object.Get(isolate)),
+                                        *(global_object.Get(isolate)),
+                                        *(eternal_object.Get(isolate)),
+                                        nullptr };
+        creator.SetDefaultContext(context,
+                                  v8::SerializeInternalFieldsCallback(),
+                                  non_local_handles);
+      }
+
+    }
+    blob =
+        creator.CreateBlob(v8::SnapshotCreator::FunctionCodeHandling::kClear);
+  }
+
+  {
+    v8::Isolate::CreateParams params;
+    params.snapshot_blob = &blob;
+    params.array_buffer_allocator = CcTest::array_buffer_allocator();
+    // Test-appropriate equivalent of v8::Isolate::New.
+    v8::Isolate* isolate = TestIsolate::New(params);
+    {
+      v8::Isolate::Scope isolate_scope(isolate);
+      {
+        // Create a new context without a new object template.
+        v8::HandleScope handle_scope(isolate);
+        v8::Local<v8::Context> context = v8::Context::New(isolate);
+        v8::Context::Scope context_scope(context);
+
+        // Retrieve the snapshotted object template.
+        v8::Local<v8::String> p0 =
+            v8::Local<v8::String>::FromSnapshot(context, 0).ToLocalChecked();
+        CHECK(!p0.IsEmpty());
+
+        v8::Local<v8::String> p1 =
+            v8::Local<v8::String>::FromSnapshot(context, 1).ToLocalChecked();
+        CHECK(!p1.IsEmpty());
+
+        v8::Local<v8::String> p2 =
+            v8::Local<v8::String>::FromSnapshot(context, 1).ToLocalChecked();
+        CHECK(!p2.IsEmpty());
+
+        CHECK(v8_str("str")->Equals(context, p0).FromJust());
+        CHECK(p0->StrictEquals(p1));
+        CHECK(p0->StrictEquals(p2));
+      }
+
+      for (auto data : deserialized_data) delete data;
+      deserialized_data.clear();
+    }
+    isolate->Dispose();
+  }
+  delete[] blob.data;
+}
+
 TEST(SnapshotCreatorIncludeGlobalProxy) {
   DisableAlwaysOpt();
   v8::StartupData blob;

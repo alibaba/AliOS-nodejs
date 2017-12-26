@@ -225,6 +225,7 @@ using v8::MemoryPressureLevel;
   V(Object, code_coverage_list, CodeCoverageList)                              \
   V(Object, weak_stack_trace_list, WeakStackTraceList)                         \
   V(Object, noscript_shared_function_infos, NoScriptSharedFunctionInfos)       \
+  V(FixedArray, serialized_non_local_handles, SerializedNonLocalHandles)       \
   V(FixedArray, serialized_templates, SerializedTemplates)                     \
   V(FixedArray, serialized_global_proxy_sizes, SerializedGlobalProxySizes)     \
   V(TemplateList, message_listeners, MessageListeners)                         \
@@ -828,6 +829,7 @@ class Heap {
   inline void SetInterpreterEntryReturnPCOffset(int pc_offset);
   inline int GetNextTemplateSerialNumber();
 
+  inline void SetSerializedNonLocalHandles(FixedArray* handles);
   inline void SetSerializedTemplates(FixedArray* templates);
   inline void SetSerializedGlobalProxySizes(FixedArray* sizes);
 

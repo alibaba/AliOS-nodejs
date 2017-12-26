@@ -668,6 +668,12 @@ void Heap::SetInterpreterEntryReturnPCOffset(int pc_offset) {
   set_interpreter_entry_return_pc_offset(Smi::FromInt(pc_offset));
 }
 
+void Heap::SetSerializedNonLocalHandles(FixedArray* handles) {
+  DCHECK_EQ(empty_fixed_array(), serialized_non_local_handles());
+  DCHECK(isolate()->serializer_enabled());
+  set_serialized_non_local_handles(handles);
+}
+
 int Heap::GetNextTemplateSerialNumber() {
   int next_serial_number = next_template_serial_number()->value() + 1;
   set_next_template_serial_number(Smi::FromInt(next_serial_number));

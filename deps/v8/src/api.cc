@@ -545,7 +545,8 @@ struct SnapshotCreatorData {
         default_context_(),
         contexts_(isolate),
         templates_(isolate),
-        created_(false) {}
+        created_(false),
+        num_non_local_handles_(0) {}
 
   static SnapshotCreatorData* cast(void* data) {
     return reinterpret_cast<SnapshotCreatorData*>(data);
@@ -559,6 +560,7 @@ struct SnapshotCreatorData {
   PersistentValueVector<Template> templates_;
   std::vector<SerializeInternalFieldsCallback> embedder_fields_serializers_;
   bool created_;
+  int num_non_local_handles_;
 };
 
 }  // namespace
@@ -597,8 +599,9 @@ Isolate* SnapshotCreator::GetIsolate() {
   return SnapshotCreatorData::cast(data_)->isolate_;
 }
 
-void SnapshotCreator::SetDefaultContext(
-    Local<Context> context, SerializeInternalFieldsCallback callback) {
+void SnapshotCreator::SetDefaultContext(Local<Context> context,
+                                        SerializeInternalFieldsCallback callback,
+                                        Data** non_local_handles) {
   DCHECK(!context.IsEmpty());
   SnapshotCreatorData* data = SnapshotCreatorData::cast(data_);
   DCHECK(!data->created_);
@@ -607,10 +610,26 @@ void SnapshotCreator::SetDefaultContext(
   CHECK_EQ(isolate, context->GetIsolate());
   data->default_context_.Reset(isolate, context);
   data->default_embedder_fields_serializer_ = callback;
+  if (non_local_handles != nullptr) {
+    i::Isolate* i_isolate = reinterpret_cast<i::Isolate*>(isolate);
+    i::HandleScope scope(i_isolate);
+    i::Handle<i::Context> env = Utils::OpenHandle(*context);
+    int num_handles = 0;
+    for (; non_local_handles[num_handles] != nullptr; ++num_handles) {}
+    if (num_handles == 0) return;
+    i::Handle<i::FixedArray> handles =
+        i_isolate->factory()->NewFixedArray(num_handles, i::TENURED);
+    for (int i = 0; i < num_handles; i++) {
+      handles->set(i, *(reinterpret_cast<i::Object**>(non_local_handles[i])));
+      ++data->num_non_local_handles_;
+    }
+    env->set_serialized_non_local_handles(*handles);
+  }
 }
 
 size_t SnapshotCreator::AddContext(Local<Context> context,
-                                   SerializeInternalFieldsCallback callback) {
+                                   SerializeInternalFieldsCallback callback,
+                                   Data** non_local_handles) {
   DCHECK(!context.IsEmpty());
   SnapshotCreatorData* data = SnapshotCreatorData::cast(data_);
   DCHECK(!data->created_);
@@ -619,6 +638,21 @@ size_t SnapshotCreator::AddContext(Local<Context> context,
   size_t index = static_cast<int>(data->contexts_.Size());
   data->contexts_.Append(context);
   data->embedder_fields_serializers_.push_back(callback);
+  if (non_local_handles != nullptr) {
+    i::Isolate* i_isolate = reinterpret_cast<i::Isolate*>(isolate);
+    i::HandleScope scope(i_isolate);
+    i::Handle<i::Context> env = Utils::OpenHandle(*context);
+    int num_handles = 0;
+    for (; non_local_handles[num_handles] != nullptr; ++num_handles) {}
+    if (num_handles == 0) return index;
+    i::Handle<i::FixedArray> handles =
+        i_isolate->factory()->NewFixedArray(num_handles, i::TENURED);
+    for (int i = 0; i < num_handles; i++) {
+      handles->set(i, *(reinterpret_cast<i::Object**>(non_local_handles[i])));
+      ++data->num_non_local_handles_;
+    }
+    env->set_serialized_non_local_handles(*handles);
+  }
   return index;
 }
 
@@ -631,6 +665,26 @@ size_t SnapshotCreator::AddTemplate(Local<Template> template_obj) {
   size_t index = static_cast<int>(data->templates_.Size());
   data->templates_.Append(template_obj);
   return index;
+}
+
+void SnapshotCreator::RegisterNonLocalHandles(Data** non_local_handles) {
+  if (non_local_handles == nullptr) return;
+
+  SnapshotCreatorData* data = SnapshotCreatorData::cast(data_);
+  i::Isolate* isolate = reinterpret_cast<i::Isolate*>(data->isolate_);
+  if (non_local_handles != nullptr) {
+    i::HandleScope scope(isolate);
+    int num_handles = 0;
+    for (; non_local_handles[num_handles] != nullptr; ++num_handles) {}
+    if (num_handles == 0) return;
+    i::Handle<i::FixedArray> handles =
+        isolate->factory()->NewFixedArray(num_handles, i::TENURED);
+    for (int i = 0; i < num_handles; i++) {
+      handles->set(i, *(reinterpret_cast<i::Object**>(non_local_handles[i])));
+      ++data->num_non_local_handles_;
+    }
+    isolate->heap()->SetSerializedNonLocalHandles(*handles);
+  }
 }
 
 StartupData SnapshotCreator::CreateBlob(
@@ -701,7 +755,7 @@ StartupData SnapshotCreator::CreateBlob(
   }
 
   i::StartupSerializer startup_serializer(isolate, function_code_handling);
-  startup_serializer.SerializeStrongReferences();
+  startup_serializer.SerializeStrongReferences(data->num_non_local_handles_);
 
   // Serialize each context with a new partial serializer.
   std::vector<i::SnapshotData*> context_snapshots;
@@ -1109,6 +1163,29 @@ void* SealHandleScope::operator new(size_t) { base::OS::Abort(); }
 void* SealHandleScope::operator new[](size_t) { base::OS::Abort(); }
 void SealHandleScope::operator delete(void*, size_t) { base::OS::Abort(); }
 void SealHandleScope::operator delete[](void*, size_t) { base::OS::Abort(); }
+
+
+internal::Object** HandleScope::NonLocalFromSnapshot(Isolate* isolate,
+                                           MaybeLocal<Context> context,
+                                           size_t index) {
+  i::Isolate* i_isolate = reinterpret_cast<i::Isolate*>(isolate);
+  i::FixedArray* non_local_handles;
+  if (context.IsEmpty()) {
+    // context independent
+    non_local_handles = i_isolate->heap()->serialized_non_local_handles();
+  } else {
+    // context dependent
+    i::Handle<i::Context> env = Utils::OpenHandle(*(context.ToLocalChecked()));
+    non_local_handles = env->serialized_non_local_handles();
+  }
+
+  int int_index = static_cast<int>(index);
+  if (int_index < non_local_handles->length()) {
+    i::Handle<i::Object> obj(non_local_handles->get(int_index), i_isolate);
+    return obj.location();
+  }
+  return nullptr;
+}
 
 void Context::Enter() {
   i::Handle<i::Context> env = Utils::OpenHandle(this);

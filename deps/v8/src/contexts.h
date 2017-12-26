@@ -195,6 +195,7 @@ enum ContextLookupFlags {
 #define NATIVE_CONTEXT_FIELDS(V)                                               \
   V(GLOBAL_PROXY_INDEX, JSObject, global_proxy_object)                         \
   V(EMBEDDER_DATA_INDEX, FixedArray, embedder_data)                            \
+  V(SERIALIZED_NON_LOCAL_HANDLES, FixedArray, serialized_non_local_handles)    \
   /* Below is alpha-sorted */                                                  \
   V(ACCESSOR_PROPERTY_DESCRIPTOR_MAP_INDEX, Map,                               \
     accessor_property_descriptor_map)                                          \

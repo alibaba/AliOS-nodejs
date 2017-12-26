@@ -25,6 +25,7 @@ class StartupSerializer : public Serializer {
   // 3) Partial snapshot cache.
   // 4) Weak references (e.g. the string table).
   void SerializeStrongReferences();
+  void SerializeStrongReferences(int num_non_local_handles);
   void SerializeWeakReferencesAndDeferred();
 
   int PartialSnapshotCacheIndex(HeapObject* o);

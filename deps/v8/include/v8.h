@@ -295,6 +295,11 @@ class Local {
   V8_INLINE static Local<T> New(Isolate* isolate,
                                 const PersistentBase<T>& that);
 
+  /** Get a context independent handle included in the snapshot by index. */
+  static MaybeLocal<T> FromSnapshot(Isolate* isolate, size_t index);
+  /** Get a context dependent handle included in the snapshot by index. */
+  static MaybeLocal<T> FromSnapshot(Local<Context> context, size_t index);
+
  private:
   friend class Utils;
   template<class F> friend class Eternal;
@@ -890,6 +895,9 @@ class V8_EXPORT HandleScope {
   // Uses heap_object to obtain the current Isolate.
   static internal::Object** CreateHandle(internal::HeapObject* heap_object,
                                          internal::Object* value);
+  static internal::Object** NonLocalFromSnapshot(Isolate* isolate,
+                                         MaybeLocal<Context> context,
+                                         size_t index);
 
   internal::Isolate* isolate_;
   internal::Object** prev_next_;
@@ -8207,10 +8215,14 @@ class V8_EXPORT SnapshotCreator {
    * global object template to create one, to be provided upon deserialization.
    *
    * \param callback optional callback to serialize internal fields.
+   *
+   * \param non_local_handles optional non-local handles to be included
+   * in the snapshot blob.
    */
   void SetDefaultContext(Local<Context> context,
                          SerializeInternalFieldsCallback callback =
-                             SerializeInternalFieldsCallback());
+                             SerializeInternalFieldsCallback(),
+                         Data** non_local_handles = nullptr);
 
   /**
    * Add additional context to be included in the snapshot blob.
@@ -8218,17 +8230,29 @@ class V8_EXPORT SnapshotCreator {
    *
    * \param callback optional callback to serialize internal fields.
    *
+   * \param non_local_handles optional non-local handles to be included
+   * in the snapshot blob.
+   *
    * \returns the index of the context in the snapshot blob.
    */
   size_t AddContext(Local<Context> context,
                     SerializeInternalFieldsCallback callback =
-                        SerializeInternalFieldsCallback());
+                        SerializeInternalFieldsCallback(),
+                    Data** non_local_handles = nullptr);
 
   /**
    * Add a template to be included in the snapshot blob.
    * \returns the index of the template in the snapshot blob.
    */
   size_t AddTemplate(Local<Template> template_obj);
+
+  /**
+   * Register context independent non-local handles to be included
+   * in the snapshot blob.
+   * \param non_local_handles non-local handles to be included
+   * in the snapshot blob.
+   */
+  void RegisterNonLocalHandles(Data** non_local_handles);
 
   /**
    * Created a snapshot data blob.
@@ -9150,6 +9174,22 @@ Local<T> Local<T>::New(Isolate* isolate, Local<T> that) {
 template <class T>
 Local<T> Local<T>::New(Isolate* isolate, const PersistentBase<T>& that) {
   return New(isolate, that.val_);
+}
+
+template <class T>
+MaybeLocal<T> Local<T>::FromSnapshot(Isolate* isolate, size_t index) {
+  T* p = reinterpret_cast<T*>(HandleScope::NonLocalFromSnapshot(isolate,
+                                              Local<Context>(), index));
+  return New(isolate, p);
+}
+
+template <class T>
+MaybeLocal<T> Local<T>::FromSnapshot(Local<Context> context, size_t index) {
+  if (context.IsEmpty()) return Local<T>();
+  Isolate* isolate = context->GetIsolate();
+  T* p = reinterpret_cast<T*>(HandleScope::NonLocalFromSnapshot(isolate,
+                                                       context, index));
+  return New(isolate, p);
 }
 
 
