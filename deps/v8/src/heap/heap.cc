@@ -4782,8 +4782,11 @@ void Heap::IterateWeakRoots(RootVisitor* v, VisitMode mode) {
   v->VisitRootPointer(Root::kStringTable, reinterpret_cast<Object**>(
                                               &roots_[kStringTableRootIndex]));
   v->Synchronize(VisitorSynchronization::kStringTable);
-  if (!isMinorGC && mode != VISIT_ALL_IN_SWEEP_NEWSPACE) {
+  if (!isMinorGC && mode != VISIT_ALL_IN_SWEEP_NEWSPACE &&
+      mode != VISIT_FOR_SERIALIZATION) {
     // Scavenge collections have special processing for this.
+    // Do not visit for serialization, since the external string table will
+    // be populated from scratch upon deserialization.
     external_string_table_.IterateAll(v);
   }
   v->Synchronize(VisitorSynchronization::kExternalStringsTable);
@@ -4892,7 +4895,7 @@ void Heap::IterateStrongRoots(RootVisitor* v, VisitMode mode) {
     case VISIT_ONLY_STRONG_ROOT_LIST:
       UNREACHABLE();
       break;
-    case VISIT_ONLY_STRONG_FOR_SERIALIZATION:
+    case VISIT_FOR_SERIALIZATION:
       break;
     case VISIT_ONLY_STRONG:
       isolate_->global_handles()->IterateStrongRoots(v);
@@ -4932,7 +4935,7 @@ void Heap::IterateStrongRoots(RootVisitor* v, VisitMode mode) {
   v->Synchronize(VisitorSynchronization::kStrongRoots);
 
   // Iterate over the partial snapshot cache unless serializing.
-  if (mode != VISIT_ONLY_STRONG_FOR_SERIALIZATION) {
+  if (mode != VISIT_FOR_SERIALIZATION) {
     SerializerDeserializer::Iterate(isolate_, v);
   }
   // We don't do a v->Synchronize call here, because in debug mode that will
