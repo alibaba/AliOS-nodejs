@@ -116,11 +116,7 @@ void TCPWrap::Initialize(Local<Object> target,
   env->set_tcp_constructor_template(t);
 
   // Create FunctionTemplate for TCPConnectWrap.
-  auto constructor = [](const FunctionCallbackInfo<Value>& args) {
-    CHECK(args.IsConstructCall());
-    ClearWrap(args.This());
-  };
-  auto cwt = FunctionTemplate::New(env->isolate(), constructor);
+  auto cwt = FunctionTemplate::New(env->isolate(), AsyncWrap::IsConstructCall);
   cwt->InstanceTemplate()->SetInternalFieldCount(1);
   AsyncWrap::AddWrapMethods(env, cwt);
   Local<String> wrapString =

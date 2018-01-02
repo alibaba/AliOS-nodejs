@@ -57,13 +57,8 @@ void LibuvStreamWrap::Initialize(Local<Object> target,
                                  Local<Context> context) {
   Environment* env = Environment::GetCurrent(context);
 
-  auto is_construct_call_callback =
-      [](const FunctionCallbackInfo<Value>& args) {
-    CHECK(args.IsConstructCall());
-    ClearWrap(args.This());
-  };
   Local<FunctionTemplate> sw =
-      FunctionTemplate::New(env->isolate(), is_construct_call_callback);
+      FunctionTemplate::New(env->isolate(), AsyncWrap::IsConstructCall);
   sw->InstanceTemplate()->SetInternalFieldCount(1);
   Local<String> wrapString =
       FIXED_ONE_BYTE_STRING(env->isolate(), "ShutdownWrap");
@@ -72,7 +67,7 @@ void LibuvStreamWrap::Initialize(Local<Object> target,
   target->Set(wrapString, sw->GetFunction());
 
   Local<FunctionTemplate> ww =
-      FunctionTemplate::New(env->isolate(), is_construct_call_callback);
+      FunctionTemplate::New(env->isolate(), AsyncWrap::IsConstructCall);
   ww->InstanceTemplate()->SetInternalFieldCount(1);
   Local<String> writeWrapString =
       FIXED_ONE_BYTE_STRING(env->isolate(), "WriteWrap");

@@ -487,6 +487,11 @@ void AsyncWrap::QueueDestroyAsyncId(const FunctionCallbackInfo<Value>& args) {
       Environment::GetCurrent(args), args[0]->NumberValue());
 }
 
+void AsyncWrap::IsConstructCall(const FunctionCallbackInfo<Value>& args) {
+  CHECK(args.IsConstructCall());
+  ClearWrap(args.This());
+}
+
 void AsyncWrap::AddWrapMethods(Environment* env,
                                Local<FunctionTemplate> constructor,
                                int flag) {

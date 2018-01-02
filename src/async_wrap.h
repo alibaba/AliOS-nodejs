@@ -128,6 +128,8 @@ class AsyncWrap : public BaseObject {
   static void AsyncReset(const v8::FunctionCallbackInfo<v8::Value>& args);
   static void QueueDestroyAsyncId(
     const v8::FunctionCallbackInfo<v8::Value>& args);
+  static void IsConstructCall(
+    const v8::FunctionCallbackInfo<v8::Value>& args);
 
   static void EmitAsyncInit(Environment* env,
                             v8::Local<v8::Object> object,

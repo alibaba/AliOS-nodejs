@@ -2174,13 +2174,8 @@ void Initialize(Local<Object> target,
   target->Set(FIXED_ONE_BYTE_STRING(env->isolate(), "AI_V4MAPPED"),
               Integer::New(env->isolate(), AI_V4MAPPED));
 
-  auto is_construct_call_callback =
-      [](const FunctionCallbackInfo<Value>& args) {
-    CHECK(args.IsConstructCall());
-    ClearWrap(args.This());
-  };
   Local<FunctionTemplate> aiw =
-      FunctionTemplate::New(env->isolate(), is_construct_call_callback);
+      FunctionTemplate::New(env->isolate(), AsyncWrap::IsConstructCall);
   aiw->InstanceTemplate()->SetInternalFieldCount(1);
   AsyncWrap::AddWrapMethods(env, aiw);
   Local<String> addrInfoWrapString =
@@ -2189,7 +2184,7 @@ void Initialize(Local<Object> target,
   target->Set(addrInfoWrapString, aiw->GetFunction());
 
   Local<FunctionTemplate> niw =
-      FunctionTemplate::New(env->isolate(), is_construct_call_callback);
+      FunctionTemplate::New(env->isolate(), AsyncWrap::IsConstructCall);
   niw->InstanceTemplate()->SetInternalFieldCount(1);
   AsyncWrap::AddWrapMethods(env, niw);
   Local<String> nameInfoWrapString =
@@ -2198,7 +2193,7 @@ void Initialize(Local<Object> target,
   target->Set(nameInfoWrapString, niw->GetFunction());
 
   Local<FunctionTemplate> qrw =
-      FunctionTemplate::New(env->isolate(), is_construct_call_callback);
+      FunctionTemplate::New(env->isolate(), AsyncWrap::IsConstructCall);
   qrw->InstanceTemplate()->SetInternalFieldCount(1);
   AsyncWrap::AddWrapMethods(env, qrw);
   Local<String> queryWrapString =
