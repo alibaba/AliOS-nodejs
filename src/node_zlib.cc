@@ -707,7 +707,20 @@ void InitZlib(Local<Object> target,
               FIXED_ONE_BYTE_STRING(env->isolate(), ZLIB_VERSION));
 }
 
+const v8::FunctionCallback templates[] = {
+  ZCtx::New,
+  ZCtx::Write<true>,
+  ZCtx::Write<false>,
+  ZCtx::Init,
+  ZCtx::Close,
+  ZCtx::Params,
+  ZCtx::Reset
+};
+
 }  // anonymous namespace
+
+NODE_MODULE_TEMPLATES(zlib, templates);
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(zlib, node::InitZlib)

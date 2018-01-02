@@ -969,6 +969,26 @@ void TLSWrap::Initialize(Local<Object> target,
   target->Set(tlsWrapString, t->GetFunction());
 }
 
+const v8::FunctionCallback TLSWrap::templates[] = {
+  TLSWrap::Wrap,
+  GetWriteQueueSize,
+  Receive,
+  Start,
+  SetVerifyMode,
+  EnableSessionCallbacks,
+  DestroySSL,
+  EnableCertCb,
+
+  // SSLWrap<TLSWrap>::AddMethods(env, t);
+
+#ifdef SSL_CTRL_SET_TLSEXT_SERVERNAME_CB
+  GetServername,
+  SetServername,
+#endif  // SSL_CRT_SET_TLSEXT_SERVERNAME_CB
+};
+
+NODE_MODULE_TEMPLATES(tls_wrap, TLSWrap::templates);
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(tls_wrap, node::TLSWrap::Initialize)

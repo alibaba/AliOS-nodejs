@@ -818,7 +818,24 @@ void InitHttpParser(Local<Object> target,
               t->GetFunction());
 }
 
+const v8::FunctionCallback templates[] = {
+  Parser::New,
+  Parser::Close,
+  Parser::Free,
+  Parser::Execute,
+  Parser::Finish,
+  Parser::Reinitialize,
+  Parser::Pause<true>,
+  Parser::Pause<false>,
+  Parser::Consume,
+  Parser::Unconsume,
+  Parser::GetCurrentBuffer
+};
+
 }  // anonymous namespace
+
+NODE_MODULE_TEMPLATES(http_parser, templates);
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(http_parser, node::InitHttpParser)

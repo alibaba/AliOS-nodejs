@@ -173,6 +173,16 @@ TTYWrap::TTYWrap(Environment* env,
   *init_err = uv_tty_init(env->event_loop(), &handle_, fd, readable);
 }
 
+const v8::FunctionCallback TTYWrap::templates[] = {
+  New,
+  GetWindowSize,
+  SetRawMode,
+  IsTTY,
+  GuessHandleType
+};
+
+NODE_MODULE_TEMPLATES(tty_wrap, TTYWrap::templates);
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(tty_wrap, node::TTYWrap::Initialize)

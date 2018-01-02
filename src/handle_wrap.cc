@@ -124,5 +124,17 @@ void HandleWrap::OnClose(uv_handle_t* handle) {
   delete wrap;
 }
 
+namespace {
+
+const v8::FunctionCallback templates[] = {
+  HandleWrap::Close,
+  HandleWrap::Ref,
+  HandleWrap::Unref,
+  HandleWrap::HasRef,
+};
+
+}  // anonymous namespace
+
+NODE_MODULE_TEMPLATES(handlewrap, templates);
 
 }  // namespace node

@@ -30,6 +30,7 @@ class JSStream : public AsyncWrap, public StreamBase {
               uv_stream_t* send_handle) override;
 
   size_t self_size() const override { return sizeof(*this); }
+  static const v8::FunctionCallback templates[];
 
  protected:
   JSStream(Environment* env, v8::Local<v8::Object> obj);

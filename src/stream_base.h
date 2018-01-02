@@ -246,6 +246,8 @@ class StreamBase : public StreamResource {
   virtual void AfterShutdown(ShutdownWrap* req, int status);
   virtual void AfterWrite(WriteWrap* req, int status);
 
+  static const v8::FunctionCallback templates[];
+
  protected:
   explicit StreamBase(Environment* env) : env_(env), consumed_(false) {
   }

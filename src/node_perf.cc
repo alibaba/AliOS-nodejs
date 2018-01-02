@@ -390,7 +390,21 @@ void Init(Local<Object> target,
   SetupGarbageCollectionTracking(env);
 }
 
+namespace {
+
+const v8::FunctionCallback templates[] = {
+  Mark,
+  Measure,
+  MarkMilestone,
+  SetupPerformanceObservers,
+  Timerify
+};
+
+}  // anonymous namespace
 }  // namespace performance
+
+NODE_MODULE_TEMPLATES(performance, performance::templates);
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(performance, node::performance::Init)

@@ -1161,7 +1161,18 @@ void InitContextify(Local<Object> target,
   ContextifyScript::Init(env, target);
 }
 
+const v8::FunctionCallback templates[] = {
+  ContextifyContext::MakeContext,
+  ContextifyContext::IsContext,
+  ContextifyScript::New,
+  ContextifyScript::RunInContext,
+  ContextifyScript::RunInThisContext
+};
+
 }  // anonymous namespace
+
+NODE_MODULE_TEMPLATES(contextify, templates);
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(contextify, node::InitContextify)

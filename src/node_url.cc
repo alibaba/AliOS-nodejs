@@ -2303,7 +2303,23 @@ static void Init(Local<Object> target,
   PARSESTATES(XX)
 #undef XX
 }
+
+namespace {
+
+const v8::FunctionCallback templates[] = {
+  Parse,
+  EncodeAuthSet,
+  ToUSVString,
+  DomainToASCII,
+  DomainToUnicode,
+  SetURLConstructor
+};
+
+}  // anonymous namespace
 }  // namespace url
+
+NODE_MODULE_TEMPLATES(url, url::templates);
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(url, node::url::Init)

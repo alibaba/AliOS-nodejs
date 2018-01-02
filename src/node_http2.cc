@@ -3041,7 +3041,43 @@ HTTP_STATUS_CODES(V)
               FIXED_ONE_BYTE_STRING(isolate, "constants"),
               constants).FromJust();
 }
+
+namespace {
+
+const v8::FunctionCallback templates[] = {
+  HttpErrorString,
+  Http2Stream::GetID,
+  Http2Stream::Destroy,
+  Http2Stream::FlushData,
+  Http2Stream::Priority,
+  Http2Stream::PushPromise,
+  Http2Stream::Info,
+  Http2Stream::RespondFD,
+  Http2Stream::Respond,
+  Http2Stream::RstStream,
+  Http2Stream::RefreshState,
+  Http2Session::New,
+  Http2Session::AltSvc,
+  Http2Session::Ping,
+  Http2Session::Consume,
+  Http2Session::Destroy,
+  Http2Session::Goaway,
+  Http2Session::Settings,
+  Http2Session::Request,
+  Http2Session::SetNextStreamID,
+  Http2Session::UpdateChunksSent,
+  Http2Session::RefreshState,
+  Http2Session::RefreshSettings<nghttp2_session_get_local_settings>,
+  Http2Session::RefreshSettings<nghttp2_session_get_remote_settings>,
+  RefreshDefaultSettings,
+  PackSettings
+};
+
+}
 }  // namespace http2
+
+NODE_MODULE_TEMPLATES(http2, http2::templates);
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(http2, node::http2::Initialize)

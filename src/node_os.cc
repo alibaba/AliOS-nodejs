@@ -425,7 +425,27 @@ void Initialize(Local<Object> target,
               Boolean::New(env->isolate(), IsBigEndian()));
 }
 
+namespace {
+
+const v8::FunctionCallback templates[] = {
+  GetHostname,
+  GetLoadAvg,
+  GetUptime,
+  GetTotalMemory,
+  GetFreeMemory,
+  GetCPUInfo,
+  GetOSType,
+  GetOSRelease,
+  GetInterfaceAddresses,
+  GetHomeDirectory,
+  GetUserInfo
+};
+
+}  // anonymous namespace
 }  // namespace os
+
+NODE_MODULE_TEMPLATES(os, os::templates);
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(os, node::os::Initialize)

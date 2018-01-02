@@ -46,6 +46,7 @@ class PipeWrap : public ConnectionWrap<PipeWrap, uv_pipe_t> {
                          v8::Local<v8::Context> context);
 
   size_t self_size() const override { return sizeof(*this); }
+  static const v8::FunctionCallback templates[];
 
  private:
   PipeWrap(Environment* env,

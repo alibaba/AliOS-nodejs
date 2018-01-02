@@ -1337,7 +1337,51 @@ void InitFs(Local<Object> target,
   target->Set(wrapString, fst->GetFunction());
 }
 
+namespace {
+
+const v8::FunctionCallback templates[] = {
+  Access,
+  Close,
+  Open,
+  Read,
+  Fdatasync,
+  Fsync,
+  Rename,
+  FTruncate,
+  RMDir,
+  MKDir,
+  ReadDir,
+  InternalModuleReadJSON,
+  InternalModuleStat,
+  Stat,
+  LStat,
+  FStat,
+  Link,
+  Symlink,
+  ReadLink,
+  Unlink,
+  WriteBuffer,
+  WriteBuffers,
+  WriteString,
+  RealPath,
+  CopyFile,
+  Chmod,
+  FChmod,
+  // LChmod,
+  Chown,
+  FChown,
+  // LChown,
+  UTimes,
+  FUTimes,
+  Mkdtemp,
+  GetStatValues,
+  NewFSReqWrap
+};
+
+}  // anonymous namespace
 }  // namespace fs
+
+NODE_MODULE_TEMPLATES(fs, fs::templates);
 
 }  // end namespace node
 

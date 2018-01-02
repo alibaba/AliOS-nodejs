@@ -38,6 +38,8 @@ class StatWatcher : public AsyncWrap {
 
   static void Initialize(Environment* env, v8::Local<v8::Object> target);
 
+  static const v8::FunctionCallback templates[];
+
  protected:
   StatWatcher(Environment* env, v8::Local<v8::Object> wrap);
 

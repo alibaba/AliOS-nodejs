@@ -133,6 +133,11 @@ static void InitConfig(Local<Object> target,
           .FromJust();
 }  // InitConfig
 
+size_t _templates_config(const v8::FunctionCallback** outptr) {
+  *outptr = nullptr;
+  return 0;
+}
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(config, node::InitConfig)

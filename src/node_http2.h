@@ -415,7 +415,7 @@ enum padding_strategy_type {
   V(NGHTTP2_ERR_BAD_CLIENT_MAGIC)                                              \
   V(NGHTTP2_ERR_FLOODED)
 
-const char* nghttp2_errname(int rv) {
+inline const char* nghttp2_errname(int rv) {
   switch (rv) {
 #define V(code) case code: return #code;
   NGHTTP2_ERROR_CODES(V)

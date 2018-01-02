@@ -9,6 +9,9 @@
 #include "util-inl.h"
 #include "v8.h"
 
+#include "node_http2.h"
+#include "tls_wrap.h"
+
 #include <limits.h>  // INT_MAX
 
 namespace node {
@@ -489,5 +492,30 @@ const char* StreamResource::Error() const {
 void StreamResource::ClearError() {
   // No-op
 }
+
+const v8::FunctionCallback StreamBase::templates[] = {
+#define STREAM_BASE_METHOD_LIST(type)                                         \
+  GetFD<type>,                                                                \
+  GetExternal<type>,                                                          \
+  GetBytesRead<type>,                                                         \
+  JSMethod<type, &StreamBase::ReadStart>,                                     \
+  JSMethod<type, &StreamBase::ReadStop>,                                      \
+  JSMethod<type, &StreamBase::Shutdown>,                                      \
+  JSMethod<type, &StreamBase::Writev>,                                        \
+  JSMethod<type, &StreamBase::WriteBuffer>,                                   \
+  JSMethod<type, &StreamBase::WriteString<ASCII> >,                           \
+  JSMethod<type, &StreamBase::WriteString<UTF8> >,                            \
+  JSMethod<type, &StreamBase::WriteString<UCS2> >,                            \
+  JSMethod<type, &StreamBase::WriteString<LATIN1> >,
+
+  STREAM_BASE_METHOD_LIST(LibuvStreamWrap)
+  STREAM_BASE_METHOD_LIST(JSStream)
+  STREAM_BASE_METHOD_LIST(http2::Http2Stream)
+  STREAM_BASE_METHOD_LIST(TLSWrap)
+
+#undef STREAM_BASE_METHOD_LIST
+};
+
+NODE_MODULE_TEMPLATES(streambase, StreamBase::templates);
 
 }  // namespace node

@@ -74,6 +74,8 @@ class LibuvStreamWrap : public HandleWrap, public StreamBase {
     return stream()->type == UV_TCP;
   }
 
+  static const v8::FunctionCallback templates[];
+
  protected:
   LibuvStreamWrap(Environment* env,
                   v8::Local<v8::Object> object,

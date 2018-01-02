@@ -40,6 +40,8 @@ class TTYWrap : public LibuvStreamWrap {
 
   size_t self_size() const override { return sizeof(*this); }
 
+  static const v8::FunctionCallback templates[];
+
  private:
   TTYWrap(Environment* env,
           v8::Local<v8::Object> object,

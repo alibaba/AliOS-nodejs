@@ -70,6 +70,7 @@ class ProcessWrap : public HandleWrap {
   }
 
   size_t self_size() const override { return sizeof(*this); }
+  static const v8::FunctionCallback templates[];
 
  private:
   static void New(const FunctionCallbackInfo<Value>& args) {
@@ -308,8 +309,16 @@ class ProcessWrap : public HandleWrap {
   uv_process_t process_;
 };
 
+const v8::FunctionCallback ProcessWrap::templates[] = {
+  New,
+  Spawn,
+  Kill
+};
 
 }  // anonymous namespace
+
+NODE_MODULE_TEMPLATES(process_wrap, ProcessWrap::templates);
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(process_wrap, node::ProcessWrap::Initialize)

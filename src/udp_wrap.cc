@@ -526,6 +526,29 @@ uv_udp_t* UDPWrap::UVHandle() {
   return &handle_;
 }
 
+const v8::FunctionCallback UDPWrap::templates[] = {
+  New,
+  GetFD,
+  Bind,
+  Send,
+  Bind6,
+  Send6,
+  Close,
+  RecvStart,
+  RecvStop,
+  GetSockOrPeerName<UDPWrap, uv_udp_getsockname>,
+  AddMembership,
+  DropMembership,
+  SetMulticastInterface,
+  SetMulticastTTL,
+  SetMulticastLoopback,
+  SetBroadcast,
+  SetTTL,
+  BufferSize,
+  NewSendWrap
+};
+
+NODE_MODULE_TEMPLATES(udp_wrap, UDPWrap::templates);
 
 }  // namespace node
 

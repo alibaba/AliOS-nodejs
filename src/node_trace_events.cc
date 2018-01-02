@@ -142,6 +142,17 @@ void InitializeTraceEvents(Local<Object> target,
   env->SetMethod(target, "categoryGroupEnabled", CategoryGroupEnabled);
 }
 
+namespace {
+
+const v8::FunctionCallback templates[] = {
+  Emit,
+  CategoryGroupEnabled
+};
+
+}  // anonymous namespace
+
+NODE_MODULE_TEMPLATES(trace_events, templates);
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(trace_events, node::InitializeTraceEvents)

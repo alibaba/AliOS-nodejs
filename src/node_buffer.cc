@@ -1253,8 +1253,47 @@ void Initialize(Local<Object> target,
               Integer::New(env->isolate(), String::kMaxLength)).FromJust();
 }
 
+const v8::FunctionCallback templates[] = {
+  SetupBufferJS,
+  CreateFromString,
+  ByteLengthUtf8,
+  Copy,
+  Compare,
+  CompareOffset,
+  Fill,
+  IndexOfBuffer,
+  IndexOfNumber,
+  IndexOfString,
+  WriteDoubleBE,
+  WriteDoubleLE,
+  WriteFloatBE,
+  WriteFloatLE,
+  Swap16,
+  Swap32,
+  Swap64,
+  EncodeUtf8String,
+
+  StringSlice<ASCII>,
+  StringSlice<BASE64>,
+  StringSlice<LATIN1>,
+  StringSlice<HEX>,
+  StringSlice<UCS2>,
+  StringSlice<UTF8>,
+
+  StringWrite<ASCII>,
+  StringWrite<BASE64>,
+  StringWrite<LATIN1>,
+  StringWrite<HEX>,
+  StringWrite<UCS2>,
+  StringWrite<UTF8>
+};
+
 }  // anonymous namespace
+
 }  // namespace Buffer
+
+NODE_MODULE_TEMPLATES(buffer, Buffer::templates);
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(buffer, node::Buffer::Initialize)

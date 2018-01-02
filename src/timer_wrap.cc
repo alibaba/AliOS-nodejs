@@ -77,6 +77,7 @@ class TimerWrap : public HandleWrap {
   }
 
   size_t self_size() const override { return sizeof(*this); }
+  static const v8::FunctionCallback templates[];
 
  private:
   static void SetImmediateCallback(const FunctionCallbackInfo<Value>& args) {
@@ -158,8 +159,19 @@ class TimerWrap : public HandleWrap {
   uv_timer_t handle_;
 };
 
+const v8::FunctionCallback TimerWrap::templates[] = {
+  New,
+  Now,
+  Start,
+  Stop,
+  SetImmediateCallback,
+  ActivateImmediateCheck
+};
 
 }  // anonymous namespace
+
+NODE_MODULE_TEMPLATES(timer_wrap, TimerWrap::templates);
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(timer_wrap, node::TimerWrap::Initialize)

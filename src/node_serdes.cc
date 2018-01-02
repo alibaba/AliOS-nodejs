@@ -480,7 +480,32 @@ void InitializeSerdesBindings(Local<Object> target,
               des->GetFunction(env->context()).ToLocalChecked()).FromJust();
 }
 
+const v8::FunctionCallback templates[] = {
+  SerializerContext::New,
+  SerializerContext::WriteHeader,
+  SerializerContext::WriteValue,
+  SerializerContext::ReleaseBuffer,
+  SerializerContext::TransferArrayBuffer,
+  SerializerContext::WriteUint32,
+  SerializerContext::WriteUint64,
+  SerializerContext::WriteDouble,
+  SerializerContext::WriteRawBytes,
+  SerializerContext::SetTreatArrayBufferViewsAsHostObjects,
+  DeserializerContext::New,
+  DeserializerContext::ReadHeader,
+  DeserializerContext::ReadValue,
+  DeserializerContext::GetWireFormatVersion,
+  DeserializerContext::TransferArrayBuffer,
+  DeserializerContext::ReadUint32,
+  DeserializerContext::ReadUint64,
+  DeserializerContext::ReadDouble,
+  DeserializerContext::ReadRawBytes
+};
+
 }  // anonymous namespace
+
+NODE_MODULE_TEMPLATES(serdes, templates);
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(serdes, node::InitializeSerdesBindings)

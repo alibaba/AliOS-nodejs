@@ -6288,7 +6288,199 @@ void InitCrypto(Local<Object> target,
   env->set_randombytes_constructor_template(rbt);
 }
 
+class CryptoTemplates {
+ public:
+   static const v8::FunctionCallback templates[];
+};
+
+const v8::FunctionCallback CryptoTemplates::templates[] = {
+  // SecureContext::Initialize(env, target);
+  SecureContext::New,
+  SecureContext::Init,
+  SecureContext::SetKey,
+  SecureContext::SetCert,
+  SecureContext::AddCACert,
+  SecureContext::AddCRL,
+  SecureContext::AddRootCerts,
+  SecureContext::SetCiphers,
+  SecureContext::SetECDHCurve,
+  SecureContext::SetDHParam,
+  SecureContext::SetOptions,
+  SecureContext::SetSessionIdContext,
+  SecureContext::SetSessionTimeout,
+  SecureContext::Close,
+  SecureContext::LoadPKCS12,
+#ifndef OPENSSL_NO_ENGINE
+  SecureContext::SetClientCertEngine,
+#endif  // !OPENSSL_NO_ENGINE
+  SecureContext::GetTicketKeys,
+  SecureContext::SetTicketKeys,
+  SecureContext::SetFreeListLength,
+  SecureContext::EnableTicketKeyCallback,
+  SecureContext::GetCertificate<true>,
+  SecureContext::GetCertificate<false>,
+  SecureContext::CtxGetter,
+
+  // Connection::Initialize(env, target);
+  Connection::New,
+  Connection::EncIn,
+  Connection::ClearOut,
+  Connection::ClearIn,
+  Connection::EncOut,
+  Connection::ClearPending,
+  Connection::EncPending,
+  Connection::Start,
+  Connection::Close,
+#ifdef SSL_CTRL_SET_TLSEXT_SERVERNAME_CB
+  Connection::GetServername,
+  Connection:: SetSNICallback,
+#endif
+
+  // CipherBase::Initialize(env, target);
+  CipherBase::New,
+  CipherBase::Init,
+  CipherBase::InitIv,
+  CipherBase::Update,
+  CipherBase::Final,
+  CipherBase::SetAutoPadding,
+  CipherBase::GetAuthTag,
+  CipherBase::SetAuthTag,
+  CipherBase::SetAAD,
+
+  // DiffieHellman::Initialize(env, target);
+  DiffieHellman::New,
+  DiffieHellman::GenerateKeys,
+  DiffieHellman::ComputeSecret,
+  DiffieHellman::GetPrime,
+  DiffieHellman::GetGenerator,
+  DiffieHellman::GetPublicKey,
+  DiffieHellman::GetPrivateKey,
+  DiffieHellman::SetPublicKey,
+  DiffieHellman::SetPrivateKey,
+  DiffieHellman::VerifyErrorGetter,
+  DiffieHellman::DiffieHellmanGroup,
+  DiffieHellman::GenerateKeys,
+  DiffieHellman::ComputeSecret,
+  DiffieHellman::GetPrime,
+  DiffieHellman::GetGenerator,
+  DiffieHellman::GetPublicKey,
+  DiffieHellman::GetPrivateKey,
+  DiffieHellman::VerifyErrorGetter,
+
+  // ECDH::Initialize(env, target);
+  ECDH::New,
+  ECDH::GenerateKeys,
+  ECDH::ComputeSecret,
+  ECDH::GetPublicKey,
+  ECDH::GetPrivateKey,
+  ECDH::SetPublicKey,
+  ECDH::SetPrivateKey,
+
+  // Hmac::Initialize(env, target);
+  Hmac::New,
+  Hmac::HmacInit,
+  Hmac::HmacUpdate,
+  Hmac::HmacDigest,
+
+  // Hash::Initialize(env, target);
+  Hash::New,
+  Hash::HashUpdate,
+  Hash::HashDigest,
+
+  // Sign::Initialize(env, target);
+  Sign::New,
+  Sign::SignInit,
+  Sign::SignUpdate,
+  Sign::SignFinal,
+
+  // Verify::Initialize(env, target);
+  Verify::New,
+  Verify::VerifyInit,
+  Verify::VerifyUpdate,
+  Verify::VerifyFinal,
+
+  VerifySpkac,
+  ExportPublicKey,
+  ExportChallenge,
+#ifndef OPENSSL_NO_ENGINE
+  SetEngine,
+#endif  // !OPENSSL_NO_ENGINE
+
+#ifdef NODE_FIPS_MODE
+  GetFipsCrypto,
+  SetFipsCrypto,
+#endif
+
+  PBKDF2,
+  RandomBytes,
+  RandomBytesBuffer,
+  TimingSafeEqual,
+  GetSSLCiphers,
+  GetCiphers,
+  GetHashes,
+  GetCurves,
+  PublicKeyCipher::Cipher<PublicKeyCipher::kPublic, EVP_PKEY_encrypt_init, EVP_PKEY_encrypt>,
+  PublicKeyCipher::Cipher<PublicKeyCipher::kPrivate, EVP_PKEY_decrypt_init, EVP_PKEY_decrypt>,
+  PublicKeyCipher::Cipher<PublicKeyCipher::kPrivate, EVP_PKEY_sign_init, EVP_PKEY_sign>,
+  PublicKeyCipher::Cipher<PublicKeyCipher::kPublic, EVP_PKEY_verify_recover_init, EVP_PKEY_verify_recover>,
+
+#ifdef SSL_set_max_send_fragment
+#define  SETMAXSENDFRAGMENT(type) SSLWrap<type>::SetMaxSendFragment,
+#else
+#define  SETMAXSENDFRAGMENT(type)
+#endif  // SSL_set_max_send_fragment
+
+#ifndef OPENSSL_NO_NEXTPROTONEG
+#define GETNEGOTIATEDPROTO(type) SSLWrap<type>::GetNegotiatedProto,
+#else
+#define GETNEGOTIATEDPROTO(type)
+#endif  // OPENSSL_NO_NEXTPROTONEG
+
+#ifndef OPENSSL_NO_NEXTPROTONEG
+#define SETNPNPROTOCOLS(type) SSLWrap<type>::SetNPNProtocols,
+#else
+#define SETNPNPROTOCOLS(type)
+#endif
+
+#define SSLWRAP_TEMPLATES(type) \
+  SSLWrap<type>::GetPeerCertificate, \
+  SSLWrap<type>::GetSession, \
+  SSLWrap<type>::SetSession, \
+  SSLWrap<type>::LoadSession, \
+  SSLWrap<type>::IsSessionReused, \
+  SSLWrap<type>::IsInitFinished, \
+  SSLWrap<type>::VerifyError, \
+  SSLWrap<type>::GetCurrentCipher, \
+  SSLWrap<type>::EndParser, \
+  SSLWrap<type>::CertCbDone, \
+  SSLWrap<type>::Renegotiate, \
+  SSLWrap<type>::Shutdown, \
+  SSLWrap<type>::GetTLSTicket, \
+  SSLWrap<type>::NewSessionDone, \
+  SSLWrap<type>::SetOCSPResponse, \
+  SSLWrap<type>::RequestOCSP, \
+  SSLWrap<type>::GetEphemeralKeyInfo, \
+  SSLWrap<type>::GetProtocol, \
+  SSLWrap<type>::GetALPNNegotiatedProto, \
+  SSLWrap<type>::SetALPNProtocols, \
+  SSLWrap<type>::SSLGetter, \
+  SETMAXSENDFRAGMENT(type) \
+  GETNEGOTIATEDPROTO(type) \
+  SETNPNPROTOCOLS(type)
+
+  SSLWRAP_TEMPLATES(Connection)
+  SSLWRAP_TEMPLATES(TLSWrap)
+
+#undef SSLWRAP_TEMPLATES
+#undef SETMAXSENDFRAGMENT
+#undef GETNEGOTIATEDPROTO
+#undef SETNPNPROTOCOLS
+};
+
 }  // namespace crypto
+
+NODE_MODULE_TEMPLATES(crypto, crypto::CryptoTemplates::templates);
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(crypto, node::crypto::InitCrypto)

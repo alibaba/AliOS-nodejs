@@ -644,7 +644,20 @@ void ModuleWrap::Initialize(Local<Object> target,
                  node::loader::ModuleWrap::SetImportModuleDynamicallyCallback);
 }
 
+const v8::FunctionCallback ModuleWrap::templates[] = {
+  New,
+  Link,
+  Instantiate,
+  Evaluate,
+  Namespace,
+  node::loader::ModuleWrap::Resolve,
+  node::loader::ModuleWrap::SetImportModuleDynamicallyCallback
+};
+
 }  // namespace loader
+
+NODE_MODULE_TEMPLATES(module_wrap, loader::ModuleWrap::templates);
+
 }  // namespace node
 
 NODE_MODULE_CONTEXT_AWARE_INTERNAL(module_wrap,

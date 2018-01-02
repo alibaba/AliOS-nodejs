@@ -4610,6 +4610,66 @@ void RegisterBuiltinModules() {
 #undef V
 }
 
+namespace {
+
+const v8::FunctionCallback templates[] = {
+  // SetupProcessObject
+  reinterpret_cast<v8::FunctionCallback>(ProcessTitleGetter),
+  reinterpret_cast<v8::FunctionCallback>(ProcessTitleSetter),
+  reinterpret_cast<v8::FunctionCallback>(EnvGetter),
+  reinterpret_cast<v8::FunctionCallback>(EnvSetter),
+  reinterpret_cast<v8::FunctionCallback>(EnvQuery),
+  reinterpret_cast<v8::FunctionCallback>(EnvDeleter),
+  reinterpret_cast<v8::FunctionCallback>(EnvEnumerator),
+  reinterpret_cast<v8::FunctionCallback>(GetParentProcessId),
+  reinterpret_cast<v8::FunctionCallback>(DebugPortGetter),
+  reinterpret_cast<v8::FunctionCallback>(DebugPortSetter),
+
+  StartProfilerIdleNotifier,
+  StopProfilerIdleNotifier,
+  GetActiveRequests,
+  GetActiveHandles,
+  Exit,
+  Abort,
+  Chdir,
+  Cwd,
+  Umask,
+#if defined(__POSIX__) && !defined(__ANDROID__) && !defined(__CloudABI__)
+  GetUid,
+  GetEUid,
+  SetUid,
+  SetEUid,
+  SetGid,
+  SetEGid,
+  GetGid,
+  GetEGid,
+  GetGroups,
+  SetGroups,
+  InitGroups,
+#endif  // __POSIX__ && !defined(__ANDROID__) && !defined(__CloudABI__)
+  Kill,
+  DebugProcess,
+  DebugEnd,
+  Hrtime,
+  CPUUsage,
+  DLOpen,
+  Uptime,
+  MemoryUsage,
+  Binding,
+  LinkedBinding,
+  InternalBinding,
+  SetupProcessObject,
+  SetupNextTick,
+  SetupPromises,
+  SetupDomainUse,
+  RunMicrotasks,
+  RawDebug
+};
+
+}  // anonymous namespace
+
+NODE_MODULE_TEMPLATES(node, templates);
+
 }  // namespace node
 
 #if !HAVE_INSPECTOR

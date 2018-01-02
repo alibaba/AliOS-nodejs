@@ -58,6 +58,8 @@
 namespace node {
 namespace crypto {
 
+class CryptoTemplates;
+
 // Forcibly clear OpenSSL's error stack on return. This stops stale errors
 // from popping up later in the lifecycle of crypto operations where they
 // would cause spurious failures. It's a rather blunt method, though.
@@ -193,6 +195,8 @@ class SecureContext : public BaseObject {
     cert_ = nullptr;
     issuer_ = nullptr;
   }
+
+  friend class CryptoTemplates;
 };
 
 // SSLWrap implicitly depends on the inheriting class' handle having an
@@ -362,6 +366,7 @@ class SSLWrap {
 #endif
 
   friend class SecureContext;
+  friend class CryptoTemplates;
 };
 
 // Connection inherits from AsyncWrap because SSLWrap makes calls to
@@ -443,6 +448,7 @@ class Connection : public AsyncWrap, public SSLWrap<Connection> {
 
   friend class ClientHelloParser;
   friend class SecureContext;
+  friend class CryptoTemplates;
 };
 
 class CipherBase : public BaseObject {
@@ -498,6 +504,8 @@ class CipherBase : public BaseObject {
   const CipherKind kind_;
   unsigned int auth_tag_len_;
   char auth_tag_[EVP_GCM_TLS_TAG_LEN];
+
+  friend class CryptoTemplates;
 };
 
 class Hmac : public BaseObject {
@@ -523,6 +531,8 @@ class Hmac : public BaseObject {
 
  private:
   HMAC_CTX* ctx_;
+
+  friend class CryptoTemplates;
 };
 
 class Hash : public BaseObject {
@@ -549,6 +559,8 @@ class Hash : public BaseObject {
  private:
   EVP_MD_CTX* mdctx_;
   bool finalized_;
+
+  friend class CryptoTemplates;
 };
 
 class SignBase : public BaseObject {
@@ -577,6 +589,8 @@ class SignBase : public BaseObject {
   void CheckThrow(Error error);
 
   EVP_MD_CTX* mdctx_;
+
+  friend class CryptoTemplates;
 };
 
 class Sign : public SignBase {
@@ -600,6 +614,8 @@ class Sign : public SignBase {
   Sign(Environment* env, v8::Local<v8::Object> wrap) : SignBase(env, wrap) {
     MakeWeak<Sign>(this);
   }
+
+  friend class CryptoTemplates;
 };
 
 class Verify : public SignBase {
@@ -623,6 +639,8 @@ class Verify : public SignBase {
   Verify(Environment* env, v8::Local<v8::Object> wrap) : SignBase(env, wrap) {
     MakeWeak<Verify>(this);
   }
+
+  friend class CryptoTemplates;
 };
 
 class PublicKeyCipher {
@@ -703,6 +721,8 @@ class DiffieHellman : public BaseObject {
   bool initialised_;
   int verifyError_;
   DH* dh;
+
+  friend class CryptoTemplates;
 };
 
 class ECDH : public BaseObject {
@@ -740,6 +760,8 @@ class ECDH : public BaseObject {
 
   EC_KEY* key_;
   const EC_GROUP* group_;
+
+  friend class CryptoTemplates;
 };
 
 bool EntropySource(unsigned char* buffer, size_t length);

@@ -45,6 +45,7 @@ class TCPWrap : public ConnectionWrap<TCPWrap, uv_tcp_t> {
                          v8::Local<v8::Context> context);
 
   size_t self_size() const override { return sizeof(*this); }
+  static const v8::FunctionCallback templates[];
 
  private:
   typedef uv_tcp_t HandleType;

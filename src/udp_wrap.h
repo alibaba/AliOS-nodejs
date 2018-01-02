@@ -67,6 +67,8 @@ class UDPWrap: public HandleWrap {
 
   size_t self_size() const override { return sizeof(*this); }
 
+  static const v8::FunctionCallback templates[];
+
  private:
   typedef uv_udp_t HandleType;
 

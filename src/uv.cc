@@ -77,7 +77,14 @@ void InitializeUV(Local<Object> target,
               err_map).FromJust();
 }
 
+const v8::FunctionCallback templates[] = {
+  ErrName
+};
+
 }  // anonymous namespace
+
+NODE_MODULE_TEMPLATES(uv, templates);
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(uv, node::InitializeUV)

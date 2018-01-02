@@ -63,6 +63,7 @@ class SignalWrap : public HandleWrap {
   }
 
   size_t self_size() const override { return sizeof(*this); }
+  static const v8::FunctionCallback templates[];
 
  private:
   static void New(const FunctionCallbackInfo<Value>& args) {
@@ -121,8 +122,16 @@ class SignalWrap : public HandleWrap {
   uv_signal_t handle_;
 };
 
+const v8::FunctionCallback SignalWrap::templates[] = {
+  New,
+  Start,
+  Stop
+};
 
 }  // anonymous namespace
+
+NODE_MODULE_TEMPLATES(signal_wrap, SignalWrap::templates);
+
 }  // namespace node
 
 

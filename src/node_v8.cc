@@ -199,6 +199,19 @@ void InitializeV8Bindings(Local<Object> target,
   env->SetMethod(target, "setFlagsFromString", SetFlagsFromString);
 }
 
+namespace {
+
+const v8::FunctionCallback templates[] = {
+  CachedDataVersionTag,
+  UpdateHeapStatisticsArrayBuffer,
+  UpdateHeapSpaceStatisticsBuffer,
+  SetFlagsFromString
+};
+
+}  // anonymous namespace
+
+NODE_MODULE_TEMPLATES(v8, templates);
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(v8, node::InitializeV8Bindings)

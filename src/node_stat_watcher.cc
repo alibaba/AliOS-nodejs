@@ -141,5 +141,12 @@ void StatWatcher::Stop() {
   MakeWeak<StatWatcher>(this);
 }
 
+const v8::FunctionCallback StatWatcher::templates[] = {
+  New,
+  Start,
+  Stop
+};
+
+NODE_MODULE_TEMPLATES(statwatcher, StatWatcher::templates);
 
 }  // namespace node

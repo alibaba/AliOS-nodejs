@@ -78,6 +78,8 @@ class TLSWrap : public AsyncWrap,
 
   void clear_stream() { stream_ = nullptr; }
 
+  static const v8::FunctionCallback templates[];
+
  protected:
   static const int kClearOutChunkSize = 16384;
 

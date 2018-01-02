@@ -344,8 +344,28 @@ void InitInspectorBindings(Local<Object> target, Local<Value> unused,
   target->Set(env->context(), conn_str, tmpl->GetFunction()).ToChecked();
 }
 
+const v8::FunctionCallback templates[] = {
+  InspectorConsoleCall,
+  AddCommandLineAPI,
+  CallAndPauseOnStart,
+  Open,
+  Url,
+  AsyncTaskScheduledWrapper,
+  InvokeAsyncTaskFnWithId<&Agent::AsyncTaskCanceled>,
+  InvokeAsyncTaskFnWithId<&Agent::AsyncTaskStarted>,
+  InvokeAsyncTaskFnWithId<&Agent::AsyncTaskFinished>,
+  RegisterAsyncHookWrapper,
+  IsEnabled,
+  JSBindingsConnection::New,
+  JSBindingsConnection::Dispatch,
+  JSBindingsConnection::Disconnect,
+};
+
 }  // namespace
 }  // namespace inspector
+
+NODE_MODULE_TEMPLATES(inspector, inspector::templates);
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(inspector,

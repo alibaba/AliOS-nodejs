@@ -226,6 +226,16 @@ void JSStream::Initialize(Local<Object> target,
   target->Set(jsStreamString, t->GetFunction());
 }
 
+const v8::FunctionCallback JSStream::templates[] = {
+  New,
+  Finish<WriteWrap>,
+  Finish<ShutdownWrap>,
+  ReadBuffer,
+  EmitEOF
+};
+
+NODE_MODULE_TEMPLATES(js_stream, JSStream::templates);
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(js_stream, node::JSStream::Initialize)

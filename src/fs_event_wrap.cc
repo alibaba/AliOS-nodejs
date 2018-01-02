@@ -219,7 +219,16 @@ void FSEventWrap::Close(const FunctionCallbackInfo<Value>& args) {
   HandleWrap::Close(args);
 }
 
+const v8::FunctionCallback templates[] = {
+  FSEventWrap::New,
+  FSEventWrap::Start,
+  FSEventWrap::Close
+};
+
 }  // anonymous namespace
+
+NODE_MODULE_TEMPLATES(fs_event_wrap, templates);
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(fs_event_wrap, node::FSEventWrap::Initialize)

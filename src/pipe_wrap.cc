@@ -233,6 +233,18 @@ void PipeWrap::Connect(const FunctionCallbackInfo<Value>& args) {
   args.GetReturnValue().Set(0);  // uv_pipe_connect() doesn't return errors.
 }
 
+const v8::FunctionCallback PipeWrap::templates[] = {
+  New,
+  Bind,
+  Listen,
+  Connect,
+  Open,
+#ifdef _WIN32
+  SetPendingInstances
+#endif
+};
+
+NODE_MODULE_TEMPLATES(pipe_wrap, PipeWrap::templates);
 
 }  // namespace node
 

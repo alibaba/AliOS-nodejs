@@ -393,6 +393,13 @@ void LibuvStreamWrap::AfterWrite(WriteWrap* w, int status) {
   StreamBase::AfterWrite(w, status);
 }
 
+const v8::FunctionCallback LibuvStreamWrap::templates[] = {
+  GetWriteQueueSize,
+  SetBlocking
+};
+
+NODE_MODULE_TEMPLATES(stream_wrap, LibuvStreamWrap::templates);
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(stream_wrap,

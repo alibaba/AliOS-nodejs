@@ -801,6 +801,28 @@ void EmitAsyncDestroy(Isolate* isolate, async_context asyncContext) {
       Environment::GetCurrent(isolate), asyncContext.async_id);
 }
 
+namespace {
+
+const v8::FunctionCallback templates[] = {
+  SetupHooks,
+  EnablePromiseHook,
+  DisablePromiseHook,
+  RegisterDestroyHook,
+  AsyncWrap::PushAsyncIds,
+  AsyncWrap::PopAsyncIds,
+  AsyncWrap::ClearAsyncIdStack,
+  AsyncWrap::QueueDestroyAsyncId,
+  AsyncWrap::GetAsyncId,
+  AsyncWrap::AsyncReset,
+  AsyncWrap::IsConstructCall,
+  reinterpret_cast<v8::FunctionCallback>(PromiseWrap::GetPromise),
+  reinterpret_cast<v8::FunctionCallback>(PromiseWrap::getParentAsyncId)
+};
+
+}  // anonymous namespace
+
+NODE_MODULE_TEMPLATES(async_wrap, templates);
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(async_wrap, node::AsyncWrap::Initialize)

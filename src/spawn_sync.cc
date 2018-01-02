@@ -1071,6 +1071,16 @@ void SyncProcessRunner::KillTimerCloseCallback(uv_handle_t* handle) {
   // No-op.
 }
 
+namespace {
+
+const v8::FunctionCallback templates[] {
+  SyncProcessRunner::Spawn
+};
+
+}  // anonymous namespace
+
+NODE_MODULE_TEMPLATES(spawn_sync, templates);
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(spawn_sync,

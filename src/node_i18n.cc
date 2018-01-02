@@ -871,7 +871,25 @@ void Init(Local<Object> target,
   env->SetMethod(target, "hasConverter", ConverterObject::Has);
 }
 
+namespace {
+
+const v8::FunctionCallback templates[] = {
+  ToUnicode,
+  ToASCII,
+  GetStringWidth,
+  GetVersion,
+  ICUErrorName,
+  Transcode,
+  ConverterObject::Create,
+  ConverterObject::Decode,
+  ConverterObject::Has
+};
+
+}  // anonymous space
 }  // namespace i18n
+
+NODE_MODULE_TEMPLATES(icu, i18n::templates);
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(icu, node::i18n::Init)

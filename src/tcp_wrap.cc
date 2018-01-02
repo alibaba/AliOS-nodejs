@@ -382,6 +382,24 @@ Local<Object> AddressToJS(Environment* env,
   return scope.Escape(info);
 }
 
+const v8::FunctionCallback TCPWrap::templates[] = {
+  New,
+  Open,
+  Bind,
+  Listen,
+  Connect,
+  Bind6,
+  Connect6,
+  GetSockOrPeerName<TCPWrap, uv_tcp_getsockname>,
+  GetSockOrPeerName<TCPWrap, uv_tcp_getpeername>,
+  SetNoDelay,
+  SetKeepAlive,
+#ifdef _WIN32
+  SetSimultaneousAccepts
+#endif
+};
+
+NODE_MODULE_TEMPLATES(tcp_wrap, TCPWrap::templates);
 
 }  // namespace node
 

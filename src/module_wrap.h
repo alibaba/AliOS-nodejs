@@ -24,6 +24,8 @@ class ModuleWrap : public BaseObject {
                          v8::Local<v8::Value> unused,
                          v8::Local<v8::Context> context);
 
+  static const v8::FunctionCallback templates[];
+
  private:
   ModuleWrap(Environment* env,
              v8::Local<v8::Object> object,

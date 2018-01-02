@@ -753,6 +753,12 @@ static inline const char *errno_string(int errorno) {
 #define NODE_MODULE_CONTEXT_AWARE_INTERNAL(modname, regfunc)                  \
   NODE_MODULE_CONTEXT_AWARE_CPP(modname, regfunc, nullptr, NM_F_INTERNAL)
 
+#define NODE_MODULE_TEMPLATES(modname, templates)                             \
+  size_t _templates_ ## modname(const v8::FunctionCallback** outptr) {        \
+    *outptr = templates;                                                      \
+    return arraysize(templates);                                              \
+  }
+
 }  // namespace node
 
 

@@ -227,7 +227,31 @@ void Initialize(Local<Object> target,
   env->SetMethod(target, "promiseReject", PromiseReject);
 }
 
+namespace {
+
+const v8::FunctionCallback templates[] = {
+#define V(lcname, ucname) ucname,
+  VALUE_METHOD_MAP(V)
+#undef V
+  IsAnyArrayBuffer,
+  GetHiddenValue,
+  SetHiddenValue,
+  GetPromiseDetails,
+  GetProxyDetails,
+  SafeToString,
+  StartSigintWatchdog,
+  StopSigintWatchdog,
+  WatchdogHasPendingSigint,
+  CreatePromise,
+  PromiseResolve,
+  PromiseReject
+};
+
+}  // anonymous namespace
 }  // namespace util
+
+NODE_MODULE_TEMPLATES(util, util::templates);
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(util, node::util::Initialize)

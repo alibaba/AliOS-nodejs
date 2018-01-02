@@ -2229,8 +2229,37 @@ void Initialize(Local<Object> target,
   target->Set(channelWrapString, channel_wrap->GetFunction());
 }
 
+const v8::FunctionCallback templates[] = {
+  GetAddrInfo,
+  GetNameInfo,
+  IsIP,
+  IsIPv4,
+  IsIPv6,
+  CanonicalizeIP,
+  StrError,
+  ChannelWrap::New,
+  Query<QueryAnyWrap>,
+  Query<QueryAWrap>,
+  Query<QueryAaaaWrap>,
+  Query<QueryCnameWrap>,
+  Query<QueryMxWrap>,
+  Query<QueryNsWrap>,
+  Query<QueryTxtWrap>,
+  Query<QuerySrvWrap>,
+  Query<QueryPtrWrap>,
+  Query<QueryNaptrWrap>,
+  Query<QuerySoaWrap>,
+  Query<GetHostByAddrWrap>,
+  GetServers,
+  SetServers,
+  Cancel
+};
+
 }  // anonymous namespace
 }  // namespace cares_wrap
+
+NODE_MODULE_TEMPLATES(cares_wrap, cares_wrap::templates);
+
 }  // namespace node
 
 NODE_BUILTIN_MODULE_CONTEXT_AWARE(cares_wrap, node::cares_wrap::Initialize)
