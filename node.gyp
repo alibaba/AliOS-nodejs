@@ -859,13 +859,46 @@
             '<(OBJ_TRACING_PATH)<(OBJ_SEPARATOR)trace_event.<(OBJ_SUFFIX)',
             '<(OBJ_GEN_PATH)<(OBJ_SEPARATOR)node_javascript.<(OBJ_SUFFIX)',
           ],
-        }],
+          'conditions': [
+            [ 'node_use_dtrace=="true"', {
+              'libraries': [
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)node_dtrace.<(OBJ_SUFFIX)',
+              ],
+              'conditions': [
+                ['OS!="mac" and OS!="linux"', {
+                  'libraries': [
+                    '<(OBJ_PATH)<(OBJ_SEPARATOR)node_dtrace_provider.<(OBJ_SUFFIX)',
+                    '<(OBJ_PATH)<(OBJ_SEPARATOR)node_dtrace_ustack.<(OBJ_SUFFIX)',
+                  ]
+                }],
+                ['OS=="linux"', {
+                  'libraries': [
+                    '<(SHARED_INTERMEDIATE_DIR)/node_dtrace_provider.o',
+                  ]
+                }],
+              ],
+            }],
+            [ 'OS=="win"', {
+              'libraries': [
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)backtrace_win32.<(OBJ_SUFFIX)',
+               ],
+            }, {
+              'libraries': [
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)backtrace_posix.<(OBJ_SUFFIX)',
+               ],
+            }],
+          ],
+        }], # end node_target_type conditions block
         [ 'node_use_openssl=="true"', {
-          'libraries': [
-            '<(OBJ_PATH)<(OBJ_SEPARATOR)node_crypto.<(OBJ_SUFFIX)',
-            '<(OBJ_PATH)<(OBJ_SEPARATOR)node_crypto_bio.<(OBJ_SUFFIX)',
-            '<(OBJ_PATH)<(OBJ_SEPARATOR)node_crypto_clienthello.<(OBJ_SUFFIX)',
-            '<(OBJ_PATH)<(OBJ_SEPARATOR)tls_wrap.<(OBJ_SUFFIX)',
+          'conditions': [
+            ['node_target_type!="static_library"', {
+              'libraries': [
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)node_crypto.<(OBJ_SUFFIX)',
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)node_crypto_bio.<(OBJ_SUFFIX)',
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)node_crypto_clienthello.<(OBJ_SUFFIX)',
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)tls_wrap.<(OBJ_SUFFIX)',
+              ],
+            }],
           ],
           'defines': [
             'HAVE_OPENSSL=1',
@@ -876,43 +909,20 @@
             'test/cctest/test_inspector_socket.cc',
             'test/cctest/test_inspector_socket_server.cc'
           ],
-          'libraries': [
-            '<(OBJ_PATH)<(OBJ_SEPARATOR)inspector_agent.<(OBJ_SUFFIX)',
-            '<(OBJ_PATH)<(OBJ_SEPARATOR)inspector_io.<(OBJ_SUFFIX)',
-            '<(OBJ_PATH)<(OBJ_SEPARATOR)inspector_js_api.<(OBJ_SUFFIX)',
-            '<(OBJ_PATH)<(OBJ_SEPARATOR)inspector_socket.<(OBJ_SUFFIX)',
-            '<(OBJ_PATH)<(OBJ_SEPARATOR)inspector_socket_server.<(OBJ_SUFFIX)',
+          'conditions': [
+            ['node_target_type!="static_library"', {
+              'libraries': [
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)inspector_agent.<(OBJ_SUFFIX)',
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)inspector_io.<(OBJ_SUFFIX)',
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)inspector_js_api.<(OBJ_SUFFIX)',
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)inspector_socket.<(OBJ_SUFFIX)',
+                '<(OBJ_PATH)<(OBJ_SEPARATOR)inspector_socket_server.<(OBJ_SUFFIX)',
+              ],
+            }],
           ],
           'defines': [
             'HAVE_INSPECTOR=1',
           ],
-        }],
-        [ 'node_use_dtrace=="true"', {
-          'libraries': [
-            '<(OBJ_PATH)<(OBJ_SEPARATOR)node_dtrace.<(OBJ_SUFFIX)',
-          ],
-          'conditions': [
-            ['OS!="mac" and OS!="linux"', {
-              'libraries': [
-                '<(OBJ_PATH)<(OBJ_SEPARATOR)node_dtrace_provider.<(OBJ_SUFFIX)',
-                '<(OBJ_PATH)<(OBJ_SEPARATOR)node_dtrace_ustack.<(OBJ_SUFFIX)',
-              ]
-            }],
-            ['OS=="linux"', {
-              'libraries': [
-                '<(SHARED_INTERMEDIATE_DIR)/node_dtrace_provider.o',
-              ]
-            }],
-          ],
-        }],
-        [ 'OS=="win"', {
-          'libraries': [
-            '<(OBJ_PATH)<(OBJ_SEPARATOR)backtrace_win32.<(OBJ_SUFFIX)',
-           ],
-        }, {
-          'libraries': [
-            '<(OBJ_PATH)<(OBJ_SEPARATOR)backtrace_posix.<(OBJ_SUFFIX)',
-           ],
         }],
         [ 'node_shared_zlib=="false"', {
           'dependencies': [
