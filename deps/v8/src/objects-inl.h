@@ -324,7 +324,10 @@ bool HeapObject::IsEnumCache() const { return IsTuple2(); }
 
 bool HeapObject::IsFrameArray() const { return IsFixedArray(); }
 
-bool HeapObject::IsArrayList() const { return IsFixedArray(); }
+bool HeapObject::IsArrayList() const {
+  return map() == GetHeap()->array_list_map() ||
+         this == GetHeap()->empty_fixed_array();
+}
 
 bool HeapObject::IsRegExpMatchInfo() const { return IsFixedArray(); }
 

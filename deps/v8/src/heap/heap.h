@@ -96,6 +96,8 @@ using v8::MemoryPressureLevel;
   V(Map, debug_evaluate_context_map, DebugEvaluateContextMap)                  \
   V(Map, script_context_table_map, ScriptContextTableMap)                      \
   /* Maps */                                                                   \
+  V(Map, descriptor_array_map, DescriptorArrayMap)                             \
+  V(Map, array_list_map, ArrayListMap)                                         \
   V(Map, fixed_double_array_map, FixedDoubleArrayMap)                          \
   V(Map, mutable_heap_number_map, MutableHeapNumberMap)                        \
   V(Map, ordered_hash_table_map, OrderedHashTableMap)                          \
@@ -228,7 +230,7 @@ using v8::MemoryPressureLevel;
   V(Object, code_coverage_list, CodeCoverageList)                              \
   V(Object, weak_stack_trace_list, WeakStackTraceList)                         \
   V(Object, noscript_shared_function_infos, NoScriptSharedFunctionInfos)       \
-  V(FixedArray, serialized_templates, SerializedTemplates)                     \
+  V(FixedArray, serialized_objects, SerializedObjects)                         \
   V(FixedArray, serialized_global_proxy_sizes, SerializedGlobalProxySizes)     \
   V(TemplateList, message_listeners, MessageListeners)                         \
   /* JS Entries */                                                             \
@@ -829,7 +831,7 @@ class Heap {
   void SetSetterStubDeoptPCOffset(int pc_offset);
   void SetInterpreterEntryReturnPCOffset(int pc_offset);
 
-  void SetSerializedTemplates(FixedArray* templates);
+  void SetSerializedObjects(FixedArray* objects);
   void SetSerializedGlobalProxySizes(FixedArray* sizes);
 
   // For post mortem debugging.

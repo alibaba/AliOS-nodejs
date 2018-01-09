@@ -119,8 +119,6 @@ void StartupSerializer::SerializeStrongReferences() {
   CHECK_NULL(isolate->thread_manager()->FirstThreadStateInUse());
   // No active or weak handles.
   CHECK(isolate->handle_scope_implementer()->blocks()->empty());
-  CHECK_EQ(0, isolate->global_handles()->global_handles_count());
-  CHECK_EQ(0, isolate->eternal_handles()->NumberOfHandles());
   // First visit immortal immovables to make sure they end up in the first page.
   serializing_immortal_immovables_roots_ = true;
   isolate->heap()->IterateStrongRoots(this, VISIT_ONLY_STRONG_ROOT_LIST);
@@ -128,6 +126,7 @@ void StartupSerializer::SerializeStrongReferences() {
   DCHECK(allocator()->HasNotExceededFirstPageOfEachSpace());
   serializing_immortal_immovables_roots_ = false;
   // Visit the rest of the strong roots.
+
   // Clear the stack limits to make the snapshot reproducible.
   // Reset it again afterwards.
   isolate->heap()->ClearStackLimits();
@@ -206,6 +205,37 @@ bool StartupSerializer::MustBeDeferred(HeapObject* object) {
   // serialized. But we must serialize Map objects since deserializer checks
   // that these root objects are indeed Maps.
   return !object->IsMap();
+}
+
+SerializedHandleChecker::SerializedHandleChecker(
+    Isolate* isolate, std::vector<Context*>* contexts)
+    : isolate_(isolate) {
+  AddToSet(isolate->heap()->serialized_objects());
+  for (auto const& context : *contexts) {
+    AddToSet(context->serialized_objects());
+  }
+}
+
+void SerializedHandleChecker::AddToSet(FixedArray* serialized) {
+  int length = serialized->length();
+  for (int i = 0; i < length; i++) serialized_.insert(serialized->get(i));
+}
+
+void SerializedHandleChecker::VisitRootPointers(Root root, Object** start,
+                                                Object** end) {
+  for (Object** p = start; p < end; p++) {
+    if (serialized_.find(*p) != serialized_.end()) continue;
+    PrintF("%s handle not serialized: ",
+           root == Root::kGlobalHandles ? "global" : "eternal");
+    (*p)->Print();
+    ok_ = false;
+  }
+}
+
+bool SerializedHandleChecker::CheckGlobalAndEternalHandles() {
+  isolate_->global_handles()->IterateAllRoots(this);
+  isolate_->eternal_handles()->IterateAllRoots(this);
+  return ok_;
 }
 
 }  // namespace internal
