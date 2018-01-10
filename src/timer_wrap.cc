@@ -83,12 +83,9 @@ class TimerWrap : public HandleWrap {
     CHECK(args[0]->IsFunction());
     auto env = Environment::GetCurrent(args);
     env->set_immediate_callback_function(args[0].As<Function>());
-    auto activate_cb = [] (const FunctionCallbackInfo<Value>& args) {
-      Environment::GetCurrent(args)->ActivateImmediateCheck();
-    };
     auto activate_function =
-        env->NewFunctionTemplate(activate_cb)->GetFunction(env->context())
-        .ToLocalChecked();
+        env->NewFunctionTemplate(ActivateImmediateCheck)
+        ->GetFunction(env->context()).ToLocalChecked();
     auto result = Array::New(env->isolate(), 2);
     result->Set(env->context(), 0, activate_function).FromJust();
     result->Set(env->context(), 1,
@@ -151,6 +148,11 @@ class TimerWrap : public HandleWrap {
       args.GetReturnValue().Set(static_cast<uint32_t>(now));
     else
       args.GetReturnValue().Set(static_cast<double>(now));
+  }
+
+  static void ActivateImmediateCheck(const FunctionCallbackInfo<Value>& args) {
+    Environment* env = Environment::GetCurrent(args);
+    env->ActivateImmediateCheck();
   }
 
   uv_timer_t handle_;
