@@ -79,6 +79,25 @@ class AliasedBuffer {
     js_array_ = v8::Global<V8T>(isolate, js_array);
   }
 
+  AliasedBuffer(v8::Isolate* isolate, v8::Local<V8T> js_array)
+      : isolate_(isolate),
+        count_(js_array->ByteLength() / sizeof(NativeT)),
+        byte_offset_(js_array->ByteOffset()),
+        free_buffer_(false) {
+    CHECK_GT(count_, 0);
+    v8::Local<v8::ArrayBuffer> ab = js_array->Buffer();
+
+    // validate that the byte_offset is aligned with sizeof(NativeT)
+    CHECK_EQ(byte_offset_ & (sizeof(NativeT) - 1), 0);
+    // validate this fits inside the backing buffer
+    CHECK_LE(sizeof(NativeT) * count_,  ab->ByteLength() - byte_offset_);
+
+    buffer_ = reinterpret_cast<NativeT*>(
+        reinterpret_cast<uint8_t*>(ab->GetContents().Data()) + byte_offset_);
+
+    js_array_ = v8::Global<V8T>(isolate, js_array);
+  }
+
   AliasedBuffer(const AliasedBuffer& that)
       : isolate_(that.isolate_),
         count_(that.count_),
