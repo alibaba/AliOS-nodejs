@@ -686,10 +686,8 @@ void TestInt32Expectations(const Int32Expectations& expectations) {
   }
 }
 
-void TypedArrayTestHelper(
-    const char* code, const Int32Expectations& expectations,
-    const char* code_to_run_after_restore = nullptr,
-    const Int32Expectations& after_restore_expectations = Int32Expectations()) {
+void TypedArrayTestHelper(const char* code,
+                          const Int32Expectations& expectations) {
   DisableAlwaysOpt();
   i::FLAG_allow_natives_syntax = true;
   v8::StartupData blob;
@@ -727,10 +725,6 @@ void TypedArrayTestHelper(
     CHECK(deserialized_data.empty());  // We do not expect any embedder data.
     v8::Context::Scope c_scope(context);
     TestInt32Expectations(expectations);
-    if (code_to_run_after_restore) {
-      CompileRun(code_to_run_after_restore);
-    }
-    TestInt32Expectations(after_restore_expectations);
   }
   isolate->Dispose();
 }
@@ -775,25 +769,6 @@ TEST(CustomSnapshotDataBlobSharedArrayBuffer) {
   };
 
   TypedArrayTestHelper(code, expectations);
-}
-
-TEST(CustomSnapshotDataBlobArrayBufferWithOffset) {
-  const char* code =
-      "var x = new Int32Array([12, 24, 48, 96]);"
-      "var y = new Int32Array(x.buffer, 4, 2)";
-  Int32Expectations expectations = {
-      std::make_tuple("x[1]", 24), std::make_tuple("x[2]", 48),
-      std::make_tuple("y[0]", 24), std::make_tuple("y[1]", 48),
-  };
-
-  // Verify that the typed arrays use the same buffer (not independent copies).
-  const char* code_to_run_after_restore = "x[2] = 57; y[0] = 42;";
-  Int32Expectations after_restore_expectations = {
-      std::make_tuple("x[1]", 42), std::make_tuple("y[1]", 57),
-  };
-
-  TypedArrayTestHelper(code, expectations, code_to_run_after_restore,
-                       after_restore_expectations);
 }
 
 TEST(CustomSnapshotDataBlobDataView) {
@@ -2619,6 +2594,16 @@ TEST(SnapshotCreatorAddData) {
           v8::ObjectTemplate::New(isolate);
       object_template->SetInternalFieldCount(3);
 
+      v8::Local<v8::Private> private_symbol =
+          v8::Private::ForApi(isolate, v8_str("private_symbol"));
+
+      v8::Local<v8::Signature> signature =
+        v8::Signature::New(isolate, v8::FunctionTemplate::New(isolate));
+
+      v8::Local<v8::AccessorSignature> accessor_signature =
+           v8::AccessorSignature::New(isolate,
+                                      v8::FunctionTemplate::New(isolate));
+
       CHECK_EQ(0u, creator.AddData(context, object));
       CHECK_EQ(1u, creator.AddData(context, v8_str("context-dependent")));
       CHECK_EQ(2u, creator.AddData(context, persistent_number_1.Get(isolate)));
@@ -2630,6 +2615,9 @@ TEST(SnapshotCreatorAddData) {
       CHECK_EQ(1u, creator.AddData(eternal_number.Get(isolate)));
       CHECK_EQ(2u, creator.AddData(object_template));
       CHECK_EQ(3u, creator.AddData(v8::FunctionTemplate::New(isolate)));
+      CHECK_EQ(4u, creator.AddData(private_symbol));
+      CHECK_EQ(5u, creator.AddData(signature));
+      CHECK_EQ(6u, creator.AddData(accessor_signature));
     }
 
     blob =
@@ -2700,7 +2688,19 @@ TEST(SnapshotCreatorAddData) {
       CHECK(
           isolate->GetDataFromSnapshotOnce<v8::FunctionTemplate>(3).IsEmpty());
 
-      CHECK(isolate->GetDataFromSnapshotOnce<v8::Value>(4).IsEmpty());
+      isolate->GetDataFromSnapshotOnce<v8::Private>(4).ToLocalChecked();
+      CHECK(
+          isolate->GetDataFromSnapshotOnce<v8::Private>(4).IsEmpty());
+
+      isolate->GetDataFromSnapshotOnce<v8::Signature>(5).ToLocalChecked();
+      CHECK(isolate->GetDataFromSnapshotOnce<v8::Signature>(5).IsEmpty());
+
+      isolate->GetDataFromSnapshotOnce<v8::AccessorSignature>(6)
+          .ToLocalChecked();
+      CHECK(
+          isolate->GetDataFromSnapshotOnce<v8::AccessorSignature>(6).IsEmpty());
+
+      CHECK(isolate->GetDataFromSnapshotOnce<v8::Value>(7).IsEmpty());
     }
     isolate->Dispose();
   }

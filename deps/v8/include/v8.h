@@ -2955,8 +2955,12 @@ class V8_EXPORT Private : public Data {
    */
   static Local<Private> ForApi(Isolate* isolate, Local<String> name);
 
+  V8_INLINE static Private* Cast(Data* data);
+
  private:
   Private();
+
+  static void CheckCast(Data* that);
 };
 
 
@@ -6020,8 +6024,12 @@ class V8_EXPORT Signature : public Data {
       Isolate* isolate,
       Local<FunctionTemplate> receiver = Local<FunctionTemplate>());
 
+  V8_INLINE static Signature* Cast(Data* data);
+
  private:
   Signature();
+
+  static void CheckCast(Data* that);
 };
 
 
@@ -6035,8 +6043,12 @@ class V8_EXPORT AccessorSignature : public Data {
       Isolate* isolate,
       Local<FunctionTemplate> receiver = Local<FunctionTemplate>());
 
+  V8_INLINE static AccessorSignature* Cast(Data* data);
+
  private:
   AccessorSignature();
+
+  static void CheckCast(Data* that);
 };
 
 
@@ -9770,6 +9782,20 @@ ObjectTemplate* ObjectTemplate::Cast(Data* data) {
   return reinterpret_cast<ObjectTemplate*>(data);
 }
 
+Signature* Signature::Cast(Data* data) {
+#ifdef V8_ENABLE_CHECKS
+  CheckCast(data);
+#endif
+  return reinterpret_cast<Signature*>(data);
+}
+
+AccessorSignature* AccessorSignature::Cast(Data* data) {
+#ifdef V8_ENABLE_CHECKS
+  CheckCast(data);
+#endif
+  return reinterpret_cast<AccessorSignature*>(data);
+}
+
 Local<Value> Object::GetInternalField(int index) {
 #ifndef V8_ENABLE_CHECKS
   typedef internal::Object O;
@@ -10007,6 +10033,14 @@ Symbol* Symbol::Cast(v8::Value* value) {
   CheckCast(value);
 #endif
   return static_cast<Symbol*>(value);
+}
+
+
+Private* Private::Cast(Data* data) {
+#ifdef V8_ENABLE_CHECKS
+  CheckCast(data);
+#endif
+  return reinterpret_cast<Private*>(data);
 }
 
 
