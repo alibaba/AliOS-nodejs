@@ -137,6 +137,14 @@
       'dependencies': [ 'deps/nghttp2/nghttp2.gyp:nghttp2' ],
     }],
 
+    [ 'node_use_snapshot=="true"', {
+      'sources': [
+        'src/node_snapshot.cc',
+        'src/node_snapshot.h',
+      ],
+      'defines': [ 'NODE_USE_SNAPSHOT=1' ],
+    }],
+
     [ 'OS=="mac"', {
       # linking Corefoundation is needed since certain OSX debugging tools
       # like Instruments require it for some features

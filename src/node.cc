@@ -74,6 +74,10 @@
 #include "../deps/v8/src/third_party/vtune/v8-vtune.h"
 #endif
 
+#ifdef NODE_USE_SNAPSHOT
+#include "node_snapshot.h"
+#endif
+
 #include <errno.h>
 #include <fcntl.h>  // _O_RDWR
 #include <limits.h>  // PATH_MAX
@@ -187,7 +191,6 @@ static std::vector<std::string> preload_modules;
 static const int v8_default_thread_pool_size = 4;
 static int v8_thread_pool_size = v8_default_thread_pool_size;
 static bool prof_process = false;
-static bool v8_is_profiling = false;
 static bool node_is_initialized = false;
 static node_module* modpending;
 static node_module* modlist_builtin;
@@ -197,6 +200,14 @@ static node_module* modlist_addon;
 static bool trace_enabled = false;
 static std::string trace_enabled_categories;  // NOLINT(runtime/string)
 static bool abort_on_uncaught_exception = false;
+
+#ifdef NODE_USE_SNAPSHOT
+static bool use_snapshot = false;
+bool create_snapshot = false;
+bool v8_is_profiling = false;
+#else
+static bool v8_is_profiling = false;
+#endif
 
 // Bit flag used to track security reverts (see node_revert.h)
 unsigned int reverted = 0;
@@ -3430,71 +3441,88 @@ void PostBootstrap(Environment* env) {
 void LoadEnvironment(Environment* env) {
   HandleScope handle_scope(env->isolate());
 
+  Local<Function> startup;
   TryCatch try_catch(env->isolate());
 
-  // Disable verbose mode to stop FatalException() handler from trying
-  // to handle the exception. Errors this early in the start-up phase
-  // are not safe to ignore.
-  try_catch.SetVerbose(false);
+#ifdef NODE_USE_SNAPSHOT
+  if (env->created_from_snapshot()) {
+    startup = env->startup();
+  } else {
+#endif
+    // Disable verbose mode to stop FatalException() handler from trying
+    // to handle the exception. Errors this early in the start-up phase
+    // are not safe to ignore.
+    try_catch.SetVerbose(false);
 
-  // Execute the lib/internal/bootstrap_node.js file which was included as a
-  // static C string in node_natives.h by node_js2c.
-  // 'internal_bootstrap_node_native' is the string containing that source code.
-  Local<String> script_name = FIXED_ONE_BYTE_STRING(env->isolate(),
-                                                    "bootstrap_node.js");
-  Local<Value> f_value = ExecuteString(env, MainSource(env), script_name);
-  if (try_catch.HasCaught())  {
-    ReportException(env, try_catch);
-    exit(10);
-  }
-  // The bootstrap_node.js file returns a function 'f'
-  CHECK(f_value->IsFunction());
+    // Execute the lib/internal/bootstrap_node.js file which was included as a
+    // static C string in node_natives.h by node_js2c.
+    // 'internal_bootstrap_node_native' is the string containing that source code.
+    Local<String> script_name = FIXED_ONE_BYTE_STRING(env->isolate(),
+                                                      "bootstrap_node.js");
+    Local<Value> f_value = ExecuteString(env, MainSource(env), script_name);
+    if (try_catch.HasCaught())  {
+      ReportException(env, try_catch);
+      exit(10);
+    }
+    // The bootstrap_node.js file returns a function 'f'
+    CHECK(f_value->IsFunction());
 
-  Local<Function> f = Local<Function>::Cast(f_value);
+    Local<Function> f = Local<Function>::Cast(f_value);
 
-  // Add a reference to the global object
-  Local<Object> global = env->context()->Global();
+    // Add a reference to the global object
+    Local<Object> global = env->context()->Global();
 
 #if defined HAVE_DTRACE || defined HAVE_ETW
-  InitDTrace(env, global);
+    InitDTrace(env, global);
 #endif
 
 #if defined HAVE_LTTNG
-  InitLTTNG(env, global);
+    InitLTTNG(env, global);
 #endif
 
 #if defined HAVE_PERFCTR
-  InitPerfCounters(env, global);
+    InitPerfCounters(env, global);
 #endif
 
-  // Enable handling of uncaught exceptions
-  // (FatalException(), break on uncaught exception in debugger)
-  //
-  // This is not strictly necessary since it's almost impossible
-  // to attach the debugger fast enough to break on exception
-  // thrown during process startup.
-  try_catch.SetVerbose(true);
+    // Enable handling of uncaught exceptions
+    // (FatalException(), break on uncaught exception in debugger)
+    //
+    // This is not strictly necessary since it's almost impossible
+    // to attach the debugger fast enough to break on exception
+    // thrown during process startup.
+    try_catch.SetVerbose(true);
 
-  env->SetMethod(env->process_object(), "_rawDebug", RawDebug);
+    env->SetMethod(env->process_object(), "_rawDebug", RawDebug);
 
-  // Expose the global object as a property on itself
-  // (Allows you to set stuff on `global` from anywhere in JavaScript.)
-  global->Set(FIXED_ONE_BYTE_STRING(env->isolate(), "global"), global);
+    // Expose the global object as a property on itself
+    // (Allows you to set stuff on `global` from anywhere in JavaScript.)
+    global->Set(FIXED_ONE_BYTE_STRING(env->isolate(), "global"), global);
 
-  // Now we call 'f' with the 'process' variable that we've built up with
-  // all our bindings. Inside bootstrap_node.js and internal/process we'll
-  // take care of assigning things to their places.
+    // Now we call 'f' with the 'process' variable that we've built up with
+    // all our bindings. Inside bootstrap_node.js and internal/process we'll
+    // take care of assigning things to their places.
 
-  // We start the process this way in order to be more modular. Developers
-  // who do not like how bootstrap_node.js sets up the module system but do
-  // like Node's I/O bindings may want to replace 'f' with their own function.
-  Local<Value> arg = env->process_object();
+    // We start the process this way in order to be more modular. Developers
+    // who do not like how bootstrap_node.js sets up the module system but do
+    // like Node's I/O bindings may want to replace 'f' with their own function.
+    Local<Value> arg = env->process_object();
 
-  Local<Function> startup =
-    f->Call(env->context(), Undefined(env->isolate()), 1, &arg)
-    .ToLocalChecked().As<Function>();
+    startup = f->Call(env->context(), Undefined(env->isolate()), 1, &arg)
+      .ToLocalChecked().As<Function>();
 
-  PostBootstrap(env);
+    PostBootstrap(env);
+
+#ifdef NODE_USE_SNAPSHOT
+    if (create_snapshot) {
+      env->set_startup(startup);
+      PreBinding(env);
+    }
+  }
+
+  if (create_snapshot) {
+    return;
+  }
+#endif
 
   auto ret =
     startup->Call(env->context(), Undefined(env->isolate()), 0, nullptr);
@@ -3906,6 +3934,12 @@ static void ParseArgs(int* argc,
       // Also a V8 option.  Pass through as-is.
       new_v8_argv[new_v8_argc] = arg;
       new_v8_argc += 1;
+#ifdef NODE_USE_SNAPSHOT
+    } else if (strcmp(arg, "--create-snapshot") == 0) {
+      create_snapshot = true;
+    } else if (strcmp(arg, "--use-snapshot") == 0) {
+      use_snapshot = true;
+#endif
     } else {
       // V8 option.  Pass through as-is.
       new_v8_argv[new_v8_argc] = arg;
@@ -4476,6 +4510,73 @@ Local<Context> NewContext(Isolate* isolate,
 }
 
 
+int DoStart(Isolate* isolate, Environment* env,
+                 int argc, const char* const* argv,
+                 int exec_argc, const char* const* exec_argv) {
+  HandleScope handle_scope(isolate);
+  CHECK_EQ(0, uv_key_create(&thread_local_env));
+  uv_key_set(&thread_local_env, env);
+
+  const char* path = argc > 1 ? argv[1] : nullptr;
+  StartInspector(env, path, debug_options);
+
+  if (debug_options.inspector_enabled() && !v8_platform.InspectorStarted(env))
+    return 12;  // Signal internal error.
+
+  env->set_abort_on_uncaught_exception(abort_on_uncaught_exception);
+
+  if (no_force_async_hooks_checks) {
+    env->async_hooks()->no_force_checks();
+  }
+
+  {
+    Environment::AsyncCallbackScope callback_scope(env);
+    env->async_hooks()->push_async_ids(1, 0);
+    LoadEnvironment(env);
+    env->async_hooks()->pop_async_id(1);
+  }
+
+  env->set_trace_sync_io(trace_sync_io);
+
+  {
+    SealHandleScope seal(isolate);
+    bool more;
+    PERFORMANCE_MARK(env, LOOP_START);
+    do {
+      uv_run(env->event_loop(), UV_RUN_DEFAULT);
+
+      v8_platform.DrainVMTasks(isolate);
+
+      more = uv_loop_alive(env->event_loop());
+      if (more)
+        continue;
+
+      EmitBeforeExit(env);
+
+      // Emit `beforeExit` if the loop became alive either after emitting
+      // event, or after running some callbacks.
+      more = uv_loop_alive(env->event_loop());
+    } while (more == true);
+    PERFORMANCE_MARK(env, LOOP_EXIT);
+  }
+
+  env->set_trace_sync_io(false);
+
+  const int exit_code = EmitExit(env);
+  RunAtExit(env);
+  uv_key_delete(&thread_local_env);
+
+  v8_platform.DrainVMTasks(isolate);
+  v8_platform.CancelVMTasks(isolate);
+  WaitForInspectorDisconnect(env);
+#if defined(LEAK_SANITIZER)
+  __lsan_do_leak_check();
+#endif
+
+  return exit_code;
+}
+
+
 inline int Start(Isolate* isolate, IsolateData* isolate_data,
                  int argc, const char* const* argv,
                  int exec_argc, const char* const* exec_argv) {
@@ -4483,68 +4584,11 @@ inline int Start(Isolate* isolate, IsolateData* isolate_data,
   Local<Context> context = NewContext(isolate);
   Context::Scope context_scope(context);
   Environment env(isolate_data, context);
-  CHECK_EQ(0, uv_key_create(&thread_local_env));
-  uv_key_set(&thread_local_env, &env);
   env.Start(argc, argv, exec_argc, exec_argv, v8_is_profiling);
 
-  const char* path = argc > 1 ? argv[1] : nullptr;
-  StartInspector(&env, path, debug_options);
-
-  if (debug_options.inspector_enabled() && !v8_platform.InspectorStarted(&env))
-    return 12;  // Signal internal error.
-
-  env.set_abort_on_uncaught_exception(abort_on_uncaught_exception);
-
-  if (no_force_async_hooks_checks) {
-    env.async_hooks()->no_force_checks();
-  }
-
-  {
-    Environment::AsyncCallbackScope callback_scope(&env);
-    env.async_hooks()->push_async_ids(1, 0);
-    LoadEnvironment(&env);
-    env.async_hooks()->pop_async_id(1);
-  }
-
-  env.set_trace_sync_io(trace_sync_io);
-
-  {
-    SealHandleScope seal(isolate);
-    bool more;
-    PERFORMANCE_MARK(&env, LOOP_START);
-    do {
-      uv_run(env.event_loop(), UV_RUN_DEFAULT);
-
-      v8_platform.DrainVMTasks(isolate);
-
-      more = uv_loop_alive(env.event_loop());
-      if (more)
-        continue;
-
-      EmitBeforeExit(&env);
-
-      // Emit `beforeExit` if the loop became alive either after emitting
-      // event, or after running some callbacks.
-      more = uv_loop_alive(env.event_loop());
-    } while (more == true);
-    PERFORMANCE_MARK(&env, LOOP_EXIT);
-  }
-
-  env.set_trace_sync_io(false);
-
-  const int exit_code = EmitExit(&env);
-  RunAtExit(&env);
-  uv_key_delete(&thread_local_env);
-
-  v8_platform.DrainVMTasks(isolate);
-  v8_platform.CancelVMTasks(isolate);
-  WaitForInspectorDisconnect(&env);
-#if defined(LEAK_SANITIZER)
-  __lsan_do_leak_check();
-#endif
-
-  return exit_code;
+  return DoStart(isolate, &env, argc, argv, exec_argc, exec_argv);
 }
+
 
 inline int Start(uv_loop_t* event_loop,
                  int argc, const char* const* argv,
@@ -4554,6 +4598,13 @@ inline int Start(uv_loop_t* event_loop,
   params.array_buffer_allocator = &allocator;
 #ifdef NODE_ENABLE_VTUNE_PROFILING
   params.code_event_handler = vTune::GetVtuneCodeEventHandler();
+#endif
+
+#ifdef NODE_USE_SNAPSHOT
+  void* env_addr = nullptr;
+  if (use_snapshot) {
+    env_addr = SetupCreateParams(&params);
+  }
 #endif
 
   Isolate* const isolate = Isolate::New(params);
@@ -4576,15 +4627,27 @@ inline int Start(uv_loop_t* event_loop,
     Locker locker(isolate);
     Isolate::Scope isolate_scope(isolate);
     HandleScope handle_scope(isolate);
-    IsolateData isolate_data(
-        isolate,
-        event_loop,
-        v8_platform.Platform(),
-        allocator.zero_fill_field());
+
     if (track_heap_objects) {
       isolate->GetHeapProfiler()->StartTrackingHeapObjects(true);
     }
-    exit_code = Start(isolate, &isolate_data, argc, argv, exec_argc, exec_argv);
+
+#ifdef NODE_USE_SNAPSHOT
+    if (use_snapshot) {
+      exit_code = StartFromSnapshot(isolate, env_addr, event_loop,
+          v8_platform.Platform(), allocator.zero_fill_field(),
+          argc, argv, exec_argc, exec_argv);
+    } else {
+#endif
+      IsolateData isolate_data(
+          isolate,
+          event_loop,
+          v8_platform.Platform(),
+          allocator.zero_fill_field());
+      exit_code = Start(isolate, &isolate_data, argc, argv, exec_argc, exec_argv);
+#ifdef NODE_USE_SNAPSHOT
+    }
+#endif
   }
 
   {
@@ -4630,31 +4693,49 @@ int Start(int argc, char** argv) {
   V8::SetEntropySource(crypto::EntropySource);
 #endif  // HAVE_OPENSSL
 
-  v8_platform.Initialize(v8_thread_pool_size);
-  // Enable tracing when argv has --trace-events-enabled.
-  if (trace_enabled) {
-    fprintf(stderr, "Warning: Trace event is an experimental feature "
-            "and could change at any time.\n");
-    v8_platform.StartTracingAgent();
-  }
-  V8::Initialize();
-  node::performance::performance_v8_start = PERFORMANCE_NOW();
-  v8_initialized = true;
-  const int exit_code =
-      Start(uv_default_loop(), argc, argv, exec_argc, exec_argv);
-  if (trace_enabled) {
-    v8_platform.StopTracingAgent();
-  }
-  v8_initialized = false;
-  V8::Dispose();
+  int exit_code;
+#ifdef NODE_USE_SNAPSHOT
+  if (create_snapshot) {
+    v8::Platform* platform = v8::platform::CreateDefaultPlatform();
+    v8::V8::InitializePlatform(platform);
+    tracing::TraceEventHelper::SetTracingController(
+        new v8::TracingController());
+    V8::Initialize();
 
-  // uv_run cannot be called from the time before the beforeExit callback
-  // runs until the program exits unless the event loop has any referenced
-  // handles after beforeExit terminates. This prevents unrefed timers
-  // that happen to terminate during shutdown from being run unsafely.
-  // Since uv_run cannot be called, uv_async handles held by the platform
-  // will never be fully cleaned up.
-  v8_platform.Dispose();
+    exit_code =
+      CreateSnapshot(uv_default_loop(), argc, argv, exec_argc, exec_argv);
+
+    v8::V8::Dispose();
+    v8::V8::ShutdownPlatform();
+  } else {
+#endif
+    v8_platform.Initialize(v8_thread_pool_size);
+    // Enable tracing when argv has --trace-events-enabled.
+    if (trace_enabled) {
+      fprintf(stderr, "Warning: Trace event is an experimental feature "
+              "and could change at any time.\n");
+      v8_platform.StartTracingAgent();
+    }
+    V8::Initialize();
+    node::performance::performance_v8_start = PERFORMANCE_NOW();
+    v8_initialized = true;
+      exit_code = Start(uv_default_loop(), argc, argv, exec_argc, exec_argv);
+    if (trace_enabled) {
+      v8_platform.StopTracingAgent();
+    }
+    v8_initialized = false;
+    V8::Dispose();
+
+    // uv_run cannot be called from the time before the beforeExit callback
+    // runs until the program exits unless the event loop has any referenced
+    // handles after beforeExit terminates. This prevents unrefed timers
+    // that happen to terminate during shutdown from being run unsafely.
+    // Since uv_run cannot be called, uv_async handles held by the platform
+    // will never be fully cleaned up.
+    v8_platform.Dispose();
+#ifdef NODE_USE_SNAPSHOT
+  }
+#endif
 
   delete[] exec_argv;
   exec_argv = nullptr;

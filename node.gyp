@@ -22,6 +22,7 @@
     'node_v8_options%': '',
     'node_enable_v8_vtunejit%': 'false',
     'node_core_target_name%': 'node',
+    'node_use_snapshot%': 'false',
     'library_files': [
       'lib/internal/bootstrap_node.js',
       'lib/async_hooks.js',
