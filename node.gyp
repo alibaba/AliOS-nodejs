@@ -861,6 +861,9 @@
             '<(OBJ_GEN_PATH)<(OBJ_SEPARATOR)node_javascript.<(OBJ_SUFFIX)',
           ],
         }],
+        [ 'node_use_snapshot=="true"', {
+          'sources': [ 'test/cctest/node_module_templates.cc' ]
+        }],
         [ 'node_use_openssl=="true"', {
           'conditions': [
             ['node_target_type!="static_library"', {
