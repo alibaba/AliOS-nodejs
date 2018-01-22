@@ -431,6 +431,24 @@ class BufferValue : public MaybeStackBuffer<char> {
 // silence a compiler warning about that.
 template <typename T> inline void USE(T&&) {}
 
+union JSTypedArrays {
+#define JS_TYPED_ARRAY_LIST(V) \
+  V(v8::Uint8Array, as_uint8_array)  \
+  V(v8::Uint32Array, as_uint32_array) \
+  V(v8::Float64Array, as_float64_array)
+
+#define DEFINE_FIELD(type, name) \
+  v8::Local<type> name;
+  JS_TYPED_ARRAY_LIST(DEFINE_FIELD)
+#undef DEFINE_FIELD
+
+#define DEFINE_CTOR(type, name) \
+  JSTypedArrays(v8::Local<type> js_array) \
+    : name(js_array) {}
+  JS_TYPED_ARRAY_LIST(DEFINE_CTOR)
+#undef DEFINE_CTOR
+};
+
 }  // namespace node
 
 #endif  // defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS

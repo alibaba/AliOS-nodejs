@@ -127,6 +127,18 @@ class http2_state {
       root_buffer) {
   }
 
+  explicit http2_state(v8::Isolate* isolate,
+                       std::vector<JSTypedArrays>* typed_arrays)
+    : root_buffer(isolate, typed_arrays->at(0).as_uint8_array),
+      session_state_buffer(isolate, typed_arrays->at(1).as_float64_array),
+      stream_state_buffer(isolate, typed_arrays->at(2).as_float64_array),
+      stream_stats_buffer(isolate, typed_arrays->at(3).as_float64_array),
+      session_stats_buffer(isolate, typed_arrays->at(4).as_float64_array),
+      padding_buffer(isolate, typed_arrays->at(5).as_uint32_array),
+      options_buffer(isolate, typed_arrays->at(6).as_uint32_array),
+      settings_buffer(isolate, typed_arrays->at(7).as_uint32_array) {
+    }
+
   AliasedBuffer<uint8_t, v8::Uint8Array> root_buffer;
   AliasedBuffer<double, v8::Float64Array> session_state_buffer;
   AliasedBuffer<double, v8::Float64Array> stream_state_buffer;
