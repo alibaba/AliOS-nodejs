@@ -286,6 +286,7 @@ class ModuleWrap;
   V(buffer_prototype_object, v8::Object)                                      \
   V(context, v8::Context)                                                     \
   V(host_import_module_dynamically_callback, v8::Function)                    \
+  V(fs_stats_field_ab, v8::ArrayBuffer)                                       \
   V(http2ping_constructor_template, v8::ObjectTemplate)                       \
   V(http2stream_constructor_template, v8::ObjectTemplate)                     \
   V(http2settings_constructor_template, v8::ObjectTemplate)                   \
