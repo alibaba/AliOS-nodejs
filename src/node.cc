@@ -3436,6 +3436,45 @@ void PostBootstrap(Environment* env) {
       FIXED_ONE_BYTE_STRING(env->isolate(), "_preload_modules")).FromJust();
 }
 
+void DoPreBinding(Environment* env,
+                  Local<Function> binding_fn,
+                  Local<Function> internal_binding_fn,
+                  const char* modname) {
+  HandleScope handle_scope(env->isolate());
+  Local<Value> arg = OneByteString(env->isolate(), modname);
+  Local<Function> fn;
+
+  if (strcmp("module_wrap", modname) == 0) {
+    fn = internal_binding_fn;
+  } else {
+    fn = binding_fn;
+  }
+
+  MakeCallback(env->isolate(),
+               env->process_object(),
+               fn,
+               1,
+               &arg);
+}
+
+void PreBinding(Environment* env) {
+  HandleScope handle_scope(env->isolate());
+  Local<Function> binding_fn =
+    env->process_object()->Get(env->context(),
+                               FIXED_ONE_BYTE_STRING(env->isolate(), "binding"))
+    .ToLocalChecked().As<Function>();
+
+  Local<Function> internal_binding_fn =
+    env->process_object()->Get(env->context(),
+                               FIXED_ONE_BYTE_STRING(env->isolate(),
+                                                     "_internalBinding"))
+    .ToLocalChecked().As<Function>();
+
+#define V(modname) DoPreBinding(env, binding_fn, internal_binding_fn, #modname);
+  NODE_BUILTIN_MODULES(V)
+#undef V
+}
+
 }  // namespace
 
 void LoadEnvironment(Environment* env) {
@@ -3510,15 +3549,17 @@ void LoadEnvironment(Environment* env) {
     startup = f->Call(env->context(), Undefined(env->isolate()), 1, &arg)
       .ToLocalChecked().As<Function>();
 
-    PostBootstrap(env);
-
 #ifdef NODE_USE_SNAPSHOT
     if (create_snapshot) {
       env->set_startup(startup);
       PreBinding(env);
     }
+#endif
+
+    PostBootstrap(env);
   }
 
+#ifdef NODE_USE_SNAPSHOT
   if (create_snapshot) {
     return;
   }
@@ -4517,11 +4558,13 @@ int DoStart(Isolate* isolate, Environment* env,
   CHECK_EQ(0, uv_key_create(&thread_local_env));
   uv_key_set(&thread_local_env, env);
 
-  const char* path = argc > 1 ? argv[1] : nullptr;
-  StartInspector(env, path, debug_options);
+  if (!create_snapshot) {
+    const char* path = argc > 1 ? argv[1] : nullptr;
+    StartInspector(env, path, debug_options);
 
-  if (debug_options.inspector_enabled() && !v8_platform.InspectorStarted(env))
-    return 12;  // Signal internal error.
+    if (debug_options.inspector_enabled() && !v8_platform.InspectorStarted(env))
+      return 12;  // Signal internal error.
+  }
 
   env->set_abort_on_uncaught_exception(abort_on_uncaught_exception);
 

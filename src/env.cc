@@ -4,8 +4,30 @@
 #include "node_buffer.h"
 #include "node_platform.h"
 
+#ifdef NODE_USE_SNAPSHOT
+#include "node_snapshot.h"
+
+#include "v8.h"
+#endif
+
 #include <stdio.h>
 #include <algorithm>
+
+#ifdef NODE_USE_SNAPSHOT
+#include <type_traits>
+
+namespace v8 {
+
+template<>
+template <class S>
+V8_INLINE
+typename std::enable_if<std::is_base_of<Value, S>::value, Local<S>>
+Local<Data>::As() const {
+  return Local<S>::Cast(*(reinterpret_cast<const Local<Value>*>(this)));
+}
+
+}  // namespace v8
+#endif
 
 namespace node {
 
@@ -69,14 +91,7 @@ IsolateData::~IsolateData() {
     platform_->UnregisterIsolate(this);
 }
 
-void Environment::Start(int argc,
-                        const char* const* argv,
-                        int exec_argc,
-                        const char* const* exec_argv,
-                        bool start_profiler_idle_notifier) {
-  HandleScope handle_scope(isolate());
-  Context::Scope context_scope(context());
-
+void Environment::SetupUV(bool start_profiler_idle_notifier) {
   uv_check_init(event_loop(), immediate_check_handle());
   uv_unref(reinterpret_cast<uv_handle_t*>(immediate_check_handle()));
 
@@ -124,6 +139,17 @@ void Environment::Start(int argc,
   if (start_profiler_idle_notifier) {
     StartProfilerIdleNotifier();
   }
+}
+
+void Environment::Start(int argc,
+                        const char* const* argv,
+                        int exec_argc,
+                        const char* const* exec_argv,
+                        bool start_profiler_idle_notifier) {
+  HandleScope handle_scope(isolate());
+  Context::Scope context_scope(context());
+
+  SetupUV(start_profiler_idle_notifier);
 
   auto process_template = FunctionTemplate::New(isolate());
   process_template->SetClassName(FIXED_ONE_BYTE_STRING(isolate(), "process"));
