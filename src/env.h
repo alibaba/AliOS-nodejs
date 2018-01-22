@@ -273,8 +273,10 @@ class ModuleWrap;
   V(x_forwarded_string, "x-forwarded-for")                                    \
   V(zero_return_string, "ZERO_RETURN")
 
-#define ENVIRONMENT_STRONG_PERSISTENT_PROPERTIES(V)                           \
-  V(as_external, v8::External)                                                \
+#define ENVIRONMENT_STRONG_PERSISTENT_PROPERTIES_NOSNAPSHOT(V)                \
+  V(host_import_module_dynamically_callback, v8::Function)
+
+#define ENVIRONMENT_STRONG_PERSISTENT_PROPERTIES_CONTEXT(V)                   \
   V(async_hooks_destroy_function, v8::Function)                               \
   V(async_hooks_init_function, v8::Function)                                  \
   V(async_hooks_before_function, v8::Function)                                \
@@ -285,7 +287,6 @@ class ModuleWrap;
   V(internal_binding_cache_object, v8::Object)                                \
   V(buffer_prototype_object, v8::Object)                                      \
   V(context, v8::Context)                                                     \
-  V(host_import_module_dynamically_callback, v8::Function)                    \
   V(fs_stats_field_ab, v8::ArrayBuffer)                                       \
   V(http2ping_constructor_template, v8::ObjectTemplate)                       \
   V(http2stream_constructor_template, v8::ObjectTemplate)                     \
@@ -314,6 +315,18 @@ class ModuleWrap;
   V(vm_parsing_context_symbol, v8::Symbol)                                    \
   V(url_constructor_function, v8::Function)                                   \
   V(write_wrap_constructor_function, v8::Function)                            \
+
+#define ENVIRONMENT_STRONG_PERSISTENT_PROPERTIES_CONSOLE(V)                   \
+  V(dnschannel, v8::Object)                                                   \
+  V(ttywrap_stdout, v8::Object)                                               \
+  V(ttywrap_stderr, v8::Object)                                               \
+  V(signalwrap, v8::Object)                                                   \
+
+#define ENVIRONMENT_STRONG_PERSISTENT_PROPERTIES(V)                           \
+  V(as_external, v8::External)                                                \
+  ENVIRONMENT_STRONG_PERSISTENT_PROPERTIES_NOSNAPSHOT(V)                      \
+  ENVIRONMENT_STRONG_PERSISTENT_PROPERTIES_CONTEXT(V)                         \
+  ENVIRONMENT_STRONG_PERSISTENT_PROPERTIES_CONSOLE(V)
 
 class Environment;
 
