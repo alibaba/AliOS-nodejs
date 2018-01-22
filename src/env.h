@@ -425,6 +425,11 @@ class Environment {
    private:
     friend class Environment;  // So we can call the constructor.
     inline AsyncHooks();
+    inline AsyncHooks(v8::Local<v8::Float64Array> async_ids_stack,
+                      v8::Local<v8::Uint32Array> fields,
+                      v8::Local<v8::Float64Array> async_id_fields,
+                      std::vector<v8::Local<v8::String>>* provider_strings);
+
     // Keep a list of all Persistent strings used for Provider types.
     v8::Eternal<v8::String> providers_[AsyncWrap::PROVIDERS_LENGTH];
     // Keep track of the environment copy itself.
@@ -467,6 +472,8 @@ class Environment {
    private:
     friend class Environment;  // So we can call the constructor.
     inline explicit ImmediateInfo(v8::Isolate* isolate);
+    inline explicit ImmediateInfo(v8::Isolate* isolate,
+                                  v8::Local<v8::Uint32Array> js_array);
 
     enum Fields {
       kCount,
@@ -487,6 +494,8 @@ class Environment {
    private:
     friend class Environment;  // So we can call the constructor.
     inline explicit TickInfo(v8::Isolate* isolate);
+    inline explicit TickInfo(v8::Isolate* isolate,
+                             v8::Local<v8::Uint8Array> js_array);
 
     enum Fields {
       kHasScheduled,

@@ -91,6 +91,22 @@ inline Environment::AsyncHooks::AsyncHooks()
 #undef V
 }
 
+inline Environment::AsyncHooks::AsyncHooks(
+                           v8::Local<v8::Float64Array> async_ids_stack,
+                           v8::Local<v8::Uint32Array> fields,
+                           v8::Local<v8::Float64Array> async_id_fields,
+                           std::vector<v8::Local<v8::String>>* provider_strings)
+    : async_ids_stack_(env()->isolate(), async_ids_stack),
+      fields_(env()->isolate(), fields),
+      async_id_fields_(env()->isolate(), async_id_fields) {
+#define V(Provider)                                                           \
+  providers_[AsyncWrap::PROVIDER_ ## Provider].Set(                           \
+      env()->isolate(),                                                       \
+      provider_strings->at(AsyncWrap::PROVIDER_ ## Provider));
+  NODE_ASYNC_PROVIDER_TYPES(V)
+#undef V
+}
+
 inline AliasedBuffer<uint32_t, v8::Uint32Array>&
 Environment::AsyncHooks::fields() {
   return fields_;
@@ -220,6 +236,10 @@ inline bool Environment::AsyncCallbackScope::in_makecallback() const {
 inline Environment::ImmediateInfo::ImmediateInfo(v8::Isolate* isolate)
     : fields_(isolate, kFieldsCount) {}
 
+inline Environment::ImmediateInfo::ImmediateInfo(v8::Isolate* isolate,
+                                         v8::Local<v8::Uint32Array> js_array)
+    : fields_(isolate, js_array) {}
+
 inline AliasedBuffer<uint32_t, v8::Uint32Array>&
     Environment::ImmediateInfo::fields() {
   return fields_;
@@ -243,6 +263,10 @@ inline void Environment::ImmediateInfo::count_dec(uint32_t decrement) {
 
 inline Environment::TickInfo::TickInfo(v8::Isolate* isolate)
     : fields_(isolate, kFieldsCount) {}
+
+inline Environment::TickInfo::TickInfo(v8::Isolate* isolate,
+                                       v8::Local<v8::Uint8Array> js_array)
+    : fields_(isolate, js_array) {}
 
 inline AliasedBuffer<uint8_t, v8::Uint8Array>& Environment::TickInfo::fields() {
   return fields_;
