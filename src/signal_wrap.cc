@@ -37,6 +37,8 @@ using v8::Object;
 using v8::String;
 using v8::Value;
 
+void ReConstructSignalWrap(Environment* env, Local<Object> object);
+
 namespace {
 
 class SignalWrap : public HandleWrap {
@@ -120,6 +122,9 @@ class SignalWrap : public HandleWrap {
   }
 
   uv_signal_t handle_;
+
+  friend void ::node::ReConstructSignalWrap(Environment* env,
+                                            Local<Object> object);
 };
 
 const v8::FunctionCallback SignalWrap::templates[] = {
@@ -131,6 +136,10 @@ const v8::FunctionCallback SignalWrap::templates[] = {
 }  // anonymous namespace
 
 NODE_MODULE_TEMPLATES(signal_wrap, SignalWrap::templates);
+
+void ReConstructSignalWrap(Environment* env, Local<Object> object) {
+  new SignalWrap(env, object);
+}
 
 }  // namespace node
 

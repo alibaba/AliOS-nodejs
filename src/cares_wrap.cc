@@ -176,6 +176,8 @@ class ChannelWrap : public AsyncWrap {
   bool library_inited_;
   int active_query_count_;
   node_ares_task_list task_list_;
+
+  friend void ReConstructChannelWrap(Environment* env, Local<Object> object);
 };
 
 ChannelWrap::ChannelWrap(Environment* env,
@@ -2256,6 +2258,11 @@ const v8::FunctionCallback templates[] = {
 };
 
 }  // anonymous namespace
+
+void ReConstructChannelWrap(Environment* env, Local<Object> object) {
+  new ChannelWrap(env, object);
+}
+
 }  // namespace cares_wrap
 
 NODE_MODULE_TEMPLATES(cares_wrap, cares_wrap::templates);

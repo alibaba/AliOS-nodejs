@@ -169,9 +169,21 @@ TTYWrap::TTYWrap(Environment* env,
     : LibuvStreamWrap(env,
                       object,
                       reinterpret_cast<uv_stream_t*>(&handle_),
-                      AsyncWrap::PROVIDER_TTYWRAP) {
+                      AsyncWrap::PROVIDER_TTYWRAP),
+      fd_(fd) {
   *init_err = uv_tty_init(env->event_loop(), &handle_, fd, readable);
 }
+
+
+void ReConstructTTYWrap(Environment* env,
+                        Local<Object> object,
+                        int fd,
+                        bool readable) {
+  int err = 0;
+  new TTYWrap(env, object, fd, readable, &err);
+  CHECK_EQ(0, err);
+}
+
 
 const v8::FunctionCallback TTYWrap::templates[] = {
   New,

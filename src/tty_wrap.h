@@ -39,6 +39,7 @@ class TTYWrap : public LibuvStreamWrap {
   uv_tty_t* UVHandle();
 
   size_t self_size() const override { return sizeof(*this); }
+  int fd() const { return fd_; }
 
   static const v8::FunctionCallback templates[];
 
@@ -55,7 +56,13 @@ class TTYWrap : public LibuvStreamWrap {
   static void SetRawMode(const v8::FunctionCallbackInfo<v8::Value>& args);
   static void New(const v8::FunctionCallbackInfo<v8::Value>& args);
 
+  int fd_;
   uv_tty_t handle_;
+
+  friend void ReConstructTTYWrap(Environment* env,
+                                 v8::Local<v8::Object> object,
+                                 int fd,
+                                 bool readable);
 };
 
 }  // namespace node
