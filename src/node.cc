@@ -2964,13 +2964,50 @@ void StopProfilerIdleNotifier(const FunctionCallbackInfo<Value>& args) {
         .FromJust();                                                          \
   } while (0)
 
+void SetupPreloadModules(Environment* env) {
+  HandleScope scope(env->isolate());
+  Local<Object> process = env->process_object();
+
+  Local<Array> array = Array::New(env->isolate());
+  for (unsigned int i = 0; i < preload_modules.size(); ++i) {
+    Local<String> module = String::NewFromUtf8(env->isolate(),
+                                               preload_modules[i].c_str());
+    array->Set(i, module);
+  }
+  READONLY_PROPERTY(process,
+                    "_preload_modules",
+                    array);
+
+  preload_modules.clear();
+}
+
+void SetupExecPath(Environment* env, const char* argv0) {
+  HandleScope scope(env->isolate());
+  Local<Object> process = env->process_object();
+
+  size_t exec_path_len = 2 * PATH_MAX;
+  char* exec_path = new char[exec_path_len];
+  Local<String> exec_path_value;
+  if (uv_exepath(exec_path, &exec_path_len) == 0) {
+    exec_path_value = String::NewFromUtf8(env->isolate(),
+                                          exec_path,
+                                          String::kNormalString,
+                                          exec_path_len);
+  } else {
+    exec_path_value = String::NewFromUtf8(env->isolate(), argv0);
+  }
+  process->Set(FIXED_ONE_BYTE_STRING(env->isolate(), "execPath"),
+               exec_path_value);
+  delete[] exec_path;
+}
+
 }  // anonymous namespace
 
-void SetupProcessObject(Environment* env,
-                        int argc,
-                        const char* const* argv,
-                        int exec_argc,
-                        const char* const* exec_argv) {
+void SetupProcessObjectStaticPart(Environment* env,
+                                  int argc,
+                                  const char* const* argv,
+                                  int exec_argc,
+                                  const char* const* exec_argv) {
   HandleScope scope(env->isolate());
 
   Local<Object> process = env->process_object();
@@ -3119,21 +3156,6 @@ void SetupProcessObject(Environment* env,
 #  endif
 #endif
 
-  // process.argv
-  Local<Array> arguments = Array::New(env->isolate(), argc);
-  for (int i = 0; i < argc; ++i) {
-    arguments->Set(i, String::NewFromUtf8(env->isolate(), argv[i]));
-  }
-  process->Set(FIXED_ONE_BYTE_STRING(env->isolate(), "argv"), arguments);
-
-  // process.execArgv
-  Local<Array> exec_arguments = Array::New(env->isolate(), exec_argc);
-  for (int i = 0; i < exec_argc; ++i) {
-    exec_arguments->Set(i, String::NewFromUtf8(env->isolate(), exec_argv[i]));
-  }
-  process->Set(FIXED_ONE_BYTE_STRING(env->isolate(), "execArgv"),
-               exec_arguments);
-
   // create process.env
   Local<ObjectTemplate> process_env_template =
       ObjectTemplate::New(env->isolate());
@@ -3149,13 +3171,11 @@ void SetupProcessObject(Environment* env,
       process_env_template->NewInstance(env->context()).ToLocalChecked();
   process->Set(FIXED_ONE_BYTE_STRING(env->isolate(), "env"), process_env);
 
-  READONLY_PROPERTY(process, "pid",
-                    Integer::New(env->isolate(), uv_os_getpid()));
-  READONLY_PROPERTY(process, "features", GetFeatures(env));
-
   CHECK(process->SetAccessor(env->context(),
                              FIXED_ONE_BYTE_STRING(env->isolate(), "ppid"),
                              GetParentProcessId).FromJust());
+
+  READONLY_PROPERTY(process, "features", GetFeatures(env));
 
   auto should_abort_on_uncaught_toggle =
       FIXED_ONE_BYTE_STRING(env->isolate(), "_shouldAbortOnUncaughtToggle");
@@ -3164,61 +3184,9 @@ void SetupProcessObject(Environment* env,
                      env->should_abort_on_uncaught_toggle().GetJSArray())
                          .FromJust());
 
-  // -e, --eval
-  if (eval_string) {
-    READONLY_PROPERTY(process,
-                      "_eval",
-                      String::NewFromUtf8(env->isolate(), eval_string));
-  }
-
-  // -p, --print
-  if (print_eval) {
-    READONLY_PROPERTY(process, "_print_eval", True(env->isolate()));
-  }
-
-  // -c, --check
-  if (syntax_check_only) {
-    READONLY_PROPERTY(process, "_syntax_check_only", True(env->isolate()));
-  }
-
-  // -i, --interactive
-  if (force_repl) {
-    READONLY_PROPERTY(process, "_forceRepl", True(env->isolate()));
-  }
-
   // -r, --require
   if (!preload_modules.empty()) {
-    Local<Array> array = Array::New(env->isolate());
-    for (unsigned int i = 0; i < preload_modules.size(); ++i) {
-      Local<String> module = String::NewFromUtf8(env->isolate(),
-                                                 preload_modules[i].c_str());
-      array->Set(i, module);
-    }
-    READONLY_PROPERTY(process,
-                      "_preload_modules",
-                      array);
-
-    preload_modules.clear();
-  }
-
-  // --no-deprecation
-  if (no_deprecation) {
-    READONLY_PROPERTY(process, "noDeprecation", True(env->isolate()));
-  }
-
-  // --no-warnings
-  if (no_process_warnings) {
-    READONLY_PROPERTY(process, "noProcessWarnings", True(env->isolate()));
-  }
-
-  // --trace-warnings
-  if (trace_warnings) {
-    READONLY_PROPERTY(process, "traceProcessWarnings", True(env->isolate()));
-  }
-
-  // --throw-deprecation
-  if (throw_deprecation) {
-    READONLY_PROPERTY(process, "throwDeprecation", True(env->isolate()));
+    SetupPreloadModules(env);
   }
 
 #ifdef NODE_NO_BROWSER_GLOBALS
@@ -3226,59 +3194,7 @@ void SetupProcessObject(Environment* env,
   READONLY_PROPERTY(process, "_noBrowserGlobals", True(env->isolate()));
 #endif  // NODE_NO_BROWSER_GLOBALS
 
-  // --prof-process
-  if (prof_process) {
-    READONLY_PROPERTY(process, "profProcess", True(env->isolate()));
-  }
-
-  // --trace-deprecation
-  if (trace_deprecation) {
-    READONLY_PROPERTY(process, "traceDeprecation", True(env->isolate()));
-  }
-
-  // TODO(refack): move the following 3 to `node_config`
-  // --inspect-brk
-  if (debug_options.wait_for_connect()) {
-    READONLY_DONT_ENUM_PROPERTY(process,
-                                "_breakFirstLine", True(env->isolate()));
-  }
-
-  // --inspect --debug-brk
-  if (debug_options.deprecated_invocation()) {
-    READONLY_DONT_ENUM_PROPERTY(process,
-                                "_deprecatedDebugBrk", True(env->isolate()));
-  }
-
-  // --debug or, --debug-brk without --inspect
-  if (debug_options.invalid_invocation()) {
-    READONLY_DONT_ENUM_PROPERTY(process,
-                                "_invalidDebug", True(env->isolate()));
-  }
-
-  // --security-revert flags
-#define V(code, _, __)                                                        \
-  do {                                                                        \
-    if (IsReverted(SECURITY_REVERT_ ## code)) {                               \
-      READONLY_PROPERTY(process, "REVERT_" #code, True(env->isolate()));      \
-    }                                                                         \
-  } while (0);
-  SECURITY_REVERSIONS(V)
-#undef V
-
-  size_t exec_path_len = 2 * PATH_MAX;
-  char* exec_path = new char[exec_path_len];
-  Local<String> exec_path_value;
-  if (uv_exepath(exec_path, &exec_path_len) == 0) {
-    exec_path_value = String::NewFromUtf8(env->isolate(),
-                                          exec_path,
-                                          String::kNormalString,
-                                          exec_path_len);
-  } else {
-    exec_path_value = String::NewFromUtf8(env->isolate(), argv[0]);
-  }
-  process->Set(FIXED_ONE_BYTE_STRING(env->isolate(), "execPath"),
-               exec_path_value);
-  delete[] exec_path;
+  SetupExecPath(env, argv[0]);
 
   auto debug_port_string = FIXED_ONE_BYTE_STRING(env->isolate(), "debugPort");
   CHECK(process->SetAccessor(env->context(),
@@ -3343,9 +3259,131 @@ void SetupProcessObject(Environment* env,
   env->SetMethod(process, "_setupDomainUse", SetupDomainUse);
 }
 
+void SetupProcessObjectRuntimePart(Environment* env,
+                                   int argc,
+                                   const char* const* argv,
+                                   int exec_argc,
+                                   const char* const* exec_argv) {
+  HandleScope scope(env->isolate());
+
+  Local<Object> process = env->process_object();
+
+  // process.argv
+  Local<Array> arguments = Array::New(env->isolate(), argc);
+  for (int i = 0; i < argc; ++i) {
+    arguments->Set(i, String::NewFromUtf8(env->isolate(), argv[i]));
+  }
+  process->Set(FIXED_ONE_BYTE_STRING(env->isolate(), "argv"), arguments);
+
+  // process.execArgv
+  Local<Array> exec_arguments = Array::New(env->isolate(), exec_argc);
+  for (int i = 0; i < exec_argc; ++i) {
+    exec_arguments->Set(i, String::NewFromUtf8(env->isolate(), exec_argv[i]));
+  }
+  process->Set(FIXED_ONE_BYTE_STRING(env->isolate(), "execArgv"),
+               exec_arguments);
+
+
+  READONLY_PROPERTY(process, "pid",
+                    Integer::New(env->isolate(), uv_os_getpid()));
+
+  // -e, --eval
+  if (eval_string) {
+    READONLY_PROPERTY(process,
+                      "_eval",
+                      String::NewFromUtf8(env->isolate(), eval_string));
+  }
+
+  // -p, --print
+  if (print_eval) {
+    READONLY_PROPERTY(process, "_print_eval", True(env->isolate()));
+  }
+
+  // -c, --check
+  if (syntax_check_only) {
+    READONLY_PROPERTY(process, "_syntax_check_only", True(env->isolate()));
+  }
+
+  // -i, --interactive
+  if (force_repl) {
+    READONLY_PROPERTY(process, "_forceRepl", True(env->isolate()));
+  }
+
+  // -r, --require
+  if (!preload_modules.empty()) {
+    SetupPreloadModules(env);
+  }
+
+  // --no-deprecation
+  if (no_deprecation) {
+    READONLY_PROPERTY(process, "noDeprecation", True(env->isolate()));
+  }
+
+  // --no-warnings
+  if (no_process_warnings) {
+    READONLY_PROPERTY(process, "noProcessWarnings", True(env->isolate()));
+  }
+
+  // --trace-warnings
+  if (trace_warnings) {
+    READONLY_PROPERTY(process, "traceProcessWarnings", True(env->isolate()));
+  }
+
+  // --throw-deprecation
+  if (throw_deprecation) {
+    READONLY_PROPERTY(process, "throwDeprecation", True(env->isolate()));
+  }
+
+  // --prof-process
+  if (prof_process) {
+    READONLY_PROPERTY(process, "profProcess", True(env->isolate()));
+  }
+
+  // --trace-deprecation
+  if (trace_deprecation) {
+    READONLY_PROPERTY(process, "traceDeprecation", True(env->isolate()));
+  }
+
+  // TODO(refack): move the following 3 to `node_config`
+  // --inspect-brk
+  if (debug_options.wait_for_connect()) {
+    READONLY_DONT_ENUM_PROPERTY(process,
+                                "_breakFirstLine", True(env->isolate()));
+  }
+
+  // --inspect --debug-brk
+  if (debug_options.deprecated_invocation()) {
+    READONLY_DONT_ENUM_PROPERTY(process,
+                                "_deprecatedDebugBrk", True(env->isolate()));
+  }
+
+  // --debug or, --debug-brk without --inspect
+  if (debug_options.invalid_invocation()) {
+    READONLY_DONT_ENUM_PROPERTY(process,
+                                "_invalidDebug", True(env->isolate()));
+  }
+
+  // --security-revert flags
+#define V(code, _, __)                                                        \
+  do {                                                                        \
+    if (IsReverted(SECURITY_REVERT_ ## code)) {                               \
+      READONLY_PROPERTY(process, "REVERT_" #code, True(env->isolate()));      \
+    }                                                                         \
+  } while (0);
+  SECURITY_REVERSIONS(V)
+#undef V
+}
 
 #undef READONLY_PROPERTY
 
+void SetupProcessObject(Environment* env,
+                        int argc,
+                        const char* const* argv,
+                        int exec_argc,
+                        const char* const* exec_argv) {
+  SetupProcessObjectStaticPart(env, argc, argv, exec_argc, exec_argv);
+  SetupProcessObjectRuntimePart(env, argc, argv, exec_argc, exec_argv);
+}
 
 void SignalExit(int signo) {
   uv_tty_reset_mode();
