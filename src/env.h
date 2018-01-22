@@ -335,6 +335,13 @@ class IsolateData {
   IsolateData(v8::Isolate* isolate, uv_loop_t* event_loop,
               MultiIsolatePlatform* platform = nullptr,
               uint32_t* zero_fill_field = nullptr);
+
+  // implemented in node_snapshot.cc
+  IsolateData(v8::Isolate* isolate, uv_loop_t* event_loop,
+              MultiIsolatePlatform* platform,
+              uint32_t* zero_fill_field,
+              bool from_snapshot);
+
   ~IsolateData();
   inline uv_loop_t* event_loop() const;
   inline uint32_t* zero_fill_field() const;
@@ -550,8 +557,18 @@ class Environment {
       const v8::PropertyCallbackInfo<T>& info);
 
   inline Environment(IsolateData* isolate_data, v8::Local<v8::Context> context);
+
+  // implemented in node_snapshot.cc
+  Environment(IsolateData* isolate_data,
+              v8::Local<v8::Context> context,
+              v8::Local<v8::External> as_external,
+              std::vector<JSTypedArrays>* typed_arrays,
+              std::vector<JSTypedArrays>* http2_state_arrays,
+              std::vector<v8::Local<v8::String>>* async_provider_strings);
+
   inline ~Environment();
 
+  void SetupUV(bool start_profiler_idle_notifier);
   void Start(int argc,
              const char* const* argv,
              int exec_argc,
