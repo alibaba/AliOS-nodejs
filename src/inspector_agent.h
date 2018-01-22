@@ -95,6 +95,13 @@ class Agent {
   void EnableAsyncHook();
   void DisableAsyncHook();
 
+  v8::Local<v8::Function> enable_async_hook_function() const {
+    return StrongPersistentToLocal(enable_async_hook_function_);
+  }
+  v8::Local<v8::Function> disable_async_hook_function() const {
+    return StrongPersistentToLocal(disable_async_hook_function_);
+  }
+
  private:
   void ToggleAsyncHook(v8::Isolate* isolate,
                        const v8::Persistent<v8::Function>& fn);
