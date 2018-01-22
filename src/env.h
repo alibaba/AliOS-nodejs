@@ -716,6 +716,8 @@ class Environment {
 
   static inline Environment* ForAsyncHooks(AsyncHooks* hooks);
 
+  inline bool created_from_snapshot() const { return created_from_snapshot_; }
+
  private:
   inline void ThrowError(v8::Local<v8::Value> (*fun)(v8::Local<v8::String>),
                          const char* errmsg);
@@ -789,6 +791,8 @@ class Environment {
   static void EnvPromiseHook(v8::PromiseHookType type,
                              v8::Local<v8::Promise> promise,
                              v8::Local<v8::Value> parent);
+
+  const bool created_from_snapshot_ = false;
 
 #define V(PropertyName, TypeName)                                             \
   v8::Persistent<TypeName> PropertyName ## _;
