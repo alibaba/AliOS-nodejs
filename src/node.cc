@@ -3331,7 +3331,12 @@ void LoadEnvironment(Environment* env) {
   // like Node's I/O bindings may want to replace 'f' with their own function.
   Local<Value> arg = env->process_object();
 
-  auto ret = f->Call(env->context(), Null(env->isolate()), 1, &arg);
+  Local<Function> startup =
+    f->Call(env->context(), Undefined(env->isolate()), 1, &arg)
+    .ToLocalChecked().As<Function>();
+
+  auto ret =
+    startup->Call(env->context(), Undefined(env->isolate()), 0, nullptr);
   // If there was an error during bootstrap then it was either handled by the
   // FatalException handler or it's unrecoverable (e.g. max call stack
   // exceeded). Either way, clear the stack so that the AsyncCallbackScope
