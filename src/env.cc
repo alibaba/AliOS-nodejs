@@ -131,6 +131,11 @@ void PropertyGetterCallback(
   V("_events")                                                                \
   V("_maxListeners")                                                          \
   V("_setupProcessObject")                                                    \
+  /* FIXME(liqyan): If node is build with bundled deps, process.versions is
+     deterministic. But if it is not, and if there're multiple versions of
+     libraries, return value of V8::GetVersion, uv_version_string,
+     ulocdata_getCLDRVersion may varies */                                    \
+  V("versions")                                                               \
 
   NAMED_ACCESS_WHITE_LIST(NAMED_ACCESS_CHECK)
 
