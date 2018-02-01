@@ -1,11 +1,13 @@
 #include "node_internals.h"
 #include "async_wrap.h"
+#include "v8.h"
 #include "v8-profiler.h"
 #include "node_buffer.h"
 #include "node_platform.h"
 
 #include <stdio.h>
 #include <algorithm>
+#include <iostream>
 
 namespace node {
 
@@ -69,6 +71,200 @@ IsolateData::~IsolateData() {
     platform_->UnregisterIsolate(this);
 }
 
+
+namespace {
+
+template <typename T>
+void check_and_warning(const v8::PropertyCallbackInfo<T>& args,
+                       const char* kind,
+                       char* name) {
+  Local<v8::Value> data  = args.Data();
+  Environment* env =
+    reinterpret_cast<Environment*>(data.As<v8::External>()->Value());
+  if (!env->allow_runtime_args_access()) {
+    std::cerr << kind << ": access to process."
+      << name << " is disallowed" << std::endl;
+  }
+}
+
+template <typename T>
+void check_and_warning(const v8::PropertyCallbackInfo<T>& args,
+                       const char* kind,
+                       uint32_t index) {
+  Local<v8::Value> data  = args.Data();
+  Environment* env =
+    reinterpret_cast<Environment*>(data.As<v8::External>()->Value());
+  if (!env->allow_runtime_args_access()) {
+    std::cerr << kind << ": access to process["
+      << index << "] is disallowed" << std::endl;
+  }
+}
+
+#define NAME_ACCESS_PROLOGUE                                                  \
+  CHECK(property->IsString());                                                \
+  Local<String> str = property.As<String>();                                  \
+  char c_str[str->Utf8Length() + 1];                                          \
+  str->WriteUtf8(c_str);
+
+#define NAME_ACCESS_EPILOGUE                                                  \
+  check_and_warning(args, __FUNCTION__, c_str);
+
+#define NAMED_ACCESS_CHECK(name)                                              \
+  if (strcmp(c_str, name) == 0) return;
+
+void PropertyGetterCallback(
+    Local<v8::Name> property,
+    const v8::PropertyCallbackInfo<v8::Value>& args) {
+  NAME_ACCESS_PROLOGUE
+
+#define NAMED_ACCESS_WHITE_LIST(V)                                            \
+  V("_internalBinding")                                                       \
+  V("_linkedBinding")                                                         \
+  V("binding")                                                                \
+  V("moduleLoadList")
+
+  NAMED_ACCESS_WHITE_LIST(NAMED_ACCESS_CHECK)
+
+#undef NAMED_ACCESS_WHITE_LIST
+
+  NAME_ACCESS_EPILOGUE
+}
+
+
+void PropertySetterCallback(
+    Local<v8::Name> property,
+    Local<v8::Value> value,
+    const v8::PropertyCallbackInfo<v8::Value>& args) {
+  NAME_ACCESS_PROLOGUE
+
+#define NAMED_ACCESS_WHITE_LIST(V)                                            \
+  V("_linkedBinding")                                                         \
+  V("binding")                                                                \
+  V("moduleLoadList")
+
+
+  NAMED_ACCESS_WHITE_LIST(NAMED_ACCESS_CHECK)
+
+#undef NAMED_ACCESS_WHITE_LIST
+
+  NAME_ACCESS_EPILOGUE
+}
+
+void PropertyDescriptorCallback(
+    Local<v8::Name> property,
+    const v8::PropertyCallbackInfo<v8::Value>& args) {
+  NAME_ACCESS_PROLOGUE
+
+#define NAMED_ACCESS_WHITE_LIST(V)                                            \
+  V("moduleLoadList")
+
+  NAMED_ACCESS_WHITE_LIST(NAMED_ACCESS_CHECK)
+
+#undef NAMED_ACCESS_WHITE_LIST
+
+  NAME_ACCESS_EPILOGUE
+}
+
+void PropertyDefinerCallback(
+    Local<v8::Name> property,
+    const v8::PropertyDescriptor& desc,
+    const v8::PropertyCallbackInfo<v8::Value>& args) {
+  NAME_ACCESS_PROLOGUE
+
+#define NAMED_ACCESS_WHITE_LIST(V)                                            \
+  V("moduleLoadList")
+
+  NAMED_ACCESS_WHITE_LIST(NAMED_ACCESS_CHECK)
+
+#undef NAMED_ACCESS_WHITE_LIST
+
+  NAME_ACCESS_EPILOGUE
+}
+
+void PropertyDeleterCallback(
+    Local<v8::Name> property,
+    const v8::PropertyCallbackInfo<v8::Boolean>& args) {
+  NAME_ACCESS_PROLOGUE
+
+#define NAMED_ACCESS_WHITE_LIST(V)                                            \
+  V("_internalBinding")
+
+  NAMED_ACCESS_WHITE_LIST(NAMED_ACCESS_CHECK)
+
+#undef NAMED_ACCESS_WHITE_LIST
+
+  NAME_ACCESS_EPILOGUE
+}
+
+#undef NAME_ACCESS_PROLOGUE
+#undef NAME_ACCESS_EPILOGUE
+#undef NAMED_ACCESS_CHECK
+
+void PropertyEnumeratorCallback(
+      const v8::PropertyCallbackInfo<v8::Array>& args) {
+  UNREACHABLE();
+}
+
+void IndexedPropertyGetterCallback(
+    uint32_t index,
+    const v8::PropertyCallbackInfo<v8::Value>& args) {
+  check_and_warning(args, __FUNCTION__, index);
+}
+
+void IndexedPropertySetterCallback(
+    uint32_t index,
+    Local<v8::Value> value,
+    const v8::PropertyCallbackInfo<v8::Value>& args) {
+  check_and_warning(args, __FUNCTION__, index);
+}
+
+void IndexedPropertyDescriptorCallback(
+    uint32_t index,
+    const v8::PropertyCallbackInfo<v8::Value>& args) {
+  check_and_warning(args, __FUNCTION__, index);
+}
+
+void IndexedPropertyDefinerCallback(
+    uint32_t index,
+    const v8::PropertyDescriptor& desc,
+    const v8::PropertyCallbackInfo<v8::Value>& args) {
+  check_and_warning(args, __FUNCTION__, index);
+}
+
+void IndexedPropertyDeleterCallback(
+    uint32_t index,
+    const v8::PropertyCallbackInfo<v8::Boolean>& args) {
+  check_and_warning(args, __FUNCTION__, index);
+}
+
+void SetupProcessObjectHandler(Environment* env,
+                               Local<FunctionTemplate> process_function_template) {
+  Local<v8::ObjectTemplate> object_template =
+    process_function_template->InstanceTemplate();
+
+  v8::NamedPropertyHandlerConfiguration config(PropertyGetterCallback,
+      PropertySetterCallback,
+      PropertyDescriptorCallback,
+      PropertyDeleterCallback,
+      PropertyEnumeratorCallback,
+      PropertyDefinerCallback,
+      env->as_external());
+
+  v8::IndexedPropertyHandlerConfiguration indexed_config(
+      IndexedPropertyGetterCallback,
+      IndexedPropertySetterCallback,
+      IndexedPropertyDescriptorCallback,
+      IndexedPropertyDeleterCallback,
+      PropertyEnumeratorCallback,
+      IndexedPropertyDefinerCallback,
+      env->as_external());
+
+  object_template->SetHandler(config);
+  object_template->SetHandler(indexed_config);
+}
+
+}  // namespace
+
 void Environment::Start(int argc,
                         const char* const* argv,
                         int exec_argc,
@@ -129,6 +325,8 @@ void Environment::Start(int argc,
 
   auto process_template = FunctionTemplate::New(isolate());
   process_template->SetClassName(FIXED_ONE_BYTE_STRING(isolate(), "process"));
+
+  SetupProcessObjectHandler(this, process_template);
 
   auto process_object =
       process_template->GetFunction()->NewInstance(context()).ToLocalChecked();

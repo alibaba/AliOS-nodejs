@@ -3331,9 +3331,13 @@ void LoadEnvironment(Environment* env) {
   // like Node's I/O bindings may want to replace 'f' with their own function.
   Local<Value> arg = env->process_object();
 
+  env->set_allow_runtime_args_access(false);
   Local<Function> startup =
     f->Call(env->context(), Undefined(env->isolate()), 1, &arg)
     .ToLocalChecked().As<Function>();
+
+  env->set_allow_runtime_args_access(true);
+  CHECK(!uv_loop_alive(env->event_loop()));
 
   auto ret =
     startup->Call(env->context(), Undefined(env->isolate()), 0, nullptr);

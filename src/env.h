@@ -573,6 +573,10 @@ class Environment {
   // to Node.
   inline bool abort_on_uncaught_exception() const;
   inline void set_abort_on_uncaught_exception(bool value);
+
+  inline bool allow_runtime_args_access() const;
+  inline void set_allow_runtime_args_access(bool value);
+
   // This is a pseudo-boolean that keeps track of whether an uncaught exception
   // should abort the process or not if --abort-on-uncaught-exception was
   // passed to Node. If the flag was not passed, it is ignored.
@@ -742,6 +746,7 @@ class Environment {
   bool trace_sync_io_;
   bool abort_on_uncaught_exception_;
   bool emit_napi_warning_;
+  bool allow_runtime_args_access_;
   size_t makecallback_cntr_;
   std::vector<double> destroy_async_id_list_;
 

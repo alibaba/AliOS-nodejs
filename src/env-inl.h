@@ -314,6 +314,7 @@ inline Environment::Environment(IsolateData* isolate_data,
       trace_sync_io_(false),
       abort_on_uncaught_exception_(false),
       emit_napi_warning_(true),
+      allow_runtime_args_access_(true),
       makecallback_cntr_(0),
       should_abort_on_uncaught_toggle_(isolate_, 1),
 #if HAVE_INSPECTOR
@@ -431,6 +432,14 @@ inline bool Environment::abort_on_uncaught_exception() const {
 
 inline void Environment::set_abort_on_uncaught_exception(bool value) {
   abort_on_uncaught_exception_ = value;
+}
+
+inline bool Environment::allow_runtime_args_access() const {
+  return allow_runtime_args_access_;
+}
+
+inline void Environment::set_allow_runtime_args_access(bool value) {
+  allow_runtime_args_access_ = value;
 }
 
 inline AliasedBuffer<uint32_t, v8::Uint32Array>&
