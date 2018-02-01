@@ -78,7 +78,7 @@ template <typename T>
 void check_and_warning(const v8::PropertyCallbackInfo<T>& args,
                        const char* kind,
                        char* name) {
-  Local<v8::Value> data  = args.Data();
+  Local<v8::Value> data = args.Data();
   Environment* env =
     reinterpret_cast<Environment*>(data.As<v8::External>()->Value());
   if (!env->allow_runtime_args_access()) {
@@ -91,7 +91,7 @@ template <typename T>
 void check_and_warning(const v8::PropertyCallbackInfo<T>& args,
                        const char* kind,
                        uint32_t index) {
-  Local<v8::Value> data  = args.Data();
+  Local<v8::Value> data = args.Data();
   Environment* env =
     reinterpret_cast<Environment*>(data.As<v8::External>()->Value());
   if (!env->allow_runtime_args_access()) {
@@ -100,13 +100,19 @@ void check_and_warning(const v8::PropertyCallbackInfo<T>& args,
   }
 }
 
-#define NAME_ACCESS_PROLOGUE                                                  \
-  CHECK(property->IsString());                                                \
-  Local<String> str = property.As<String>();                                  \
+#define NAMED_ACCESS_PROLOGUE                                                 \
+  Local<String> str;                                                          \
+  if (property->IsString()) {                                                 \
+    str = property.As<String>();                                              \
+  } else if (property->IsSymbol()){                                           \
+    str = property.As<v8::Symbol>()->Name().As<String>();                     \
+  } else {                                                                    \
+    UNREACHABLE();                                                            \
+  }                                                                           \
   char c_str[str->Utf8Length() + 1];                                          \
   str->WriteUtf8(c_str);
 
-#define NAME_ACCESS_EPILOGUE                                                  \
+#define NAMED_ACCESS_EPILOGUE                                                 \
   check_and_warning(args, __FUNCTION__, c_str);
 
 #define NAMED_ACCESS_CHECK(name)                                              \
@@ -115,7 +121,7 @@ void check_and_warning(const v8::PropertyCallbackInfo<T>& args,
 void PropertyGetterCallback(
     Local<v8::Name> property,
     const v8::PropertyCallbackInfo<v8::Value>& args) {
-  NAME_ACCESS_PROLOGUE
+  NAMED_ACCESS_PROLOGUE
 
 #define NAMED_ACCESS_WHITE_LIST(V)                                            \
   V("_internalBinding")                                                       \
@@ -127,7 +133,7 @@ void PropertyGetterCallback(
 
 #undef NAMED_ACCESS_WHITE_LIST
 
-  NAME_ACCESS_EPILOGUE
+  NAMED_ACCESS_EPILOGUE
 }
 
 
@@ -135,7 +141,7 @@ void PropertySetterCallback(
     Local<v8::Name> property,
     Local<v8::Value> value,
     const v8::PropertyCallbackInfo<v8::Value>& args) {
-  NAME_ACCESS_PROLOGUE
+  NAMED_ACCESS_PROLOGUE
 
 #define NAMED_ACCESS_WHITE_LIST(V)                                            \
   V("_linkedBinding")                                                         \
@@ -147,13 +153,13 @@ void PropertySetterCallback(
 
 #undef NAMED_ACCESS_WHITE_LIST
 
-  NAME_ACCESS_EPILOGUE
+  NAMED_ACCESS_EPILOGUE
 }
 
 void PropertyDescriptorCallback(
     Local<v8::Name> property,
     const v8::PropertyCallbackInfo<v8::Value>& args) {
-  NAME_ACCESS_PROLOGUE
+  NAMED_ACCESS_PROLOGUE
 
 #define NAMED_ACCESS_WHITE_LIST(V)                                            \
   V("moduleLoadList")
@@ -162,14 +168,14 @@ void PropertyDescriptorCallback(
 
 #undef NAMED_ACCESS_WHITE_LIST
 
-  NAME_ACCESS_EPILOGUE
+  NAMED_ACCESS_EPILOGUE
 }
 
 void PropertyDefinerCallback(
     Local<v8::Name> property,
     const v8::PropertyDescriptor& desc,
     const v8::PropertyCallbackInfo<v8::Value>& args) {
-  NAME_ACCESS_PROLOGUE
+  NAMED_ACCESS_PROLOGUE
 
 #define NAMED_ACCESS_WHITE_LIST(V)                                            \
   V("moduleLoadList")
@@ -178,13 +184,13 @@ void PropertyDefinerCallback(
 
 #undef NAMED_ACCESS_WHITE_LIST
 
-  NAME_ACCESS_EPILOGUE
+  NAMED_ACCESS_EPILOGUE
 }
 
 void PropertyDeleterCallback(
     Local<v8::Name> property,
     const v8::PropertyCallbackInfo<v8::Boolean>& args) {
-  NAME_ACCESS_PROLOGUE
+  NAMED_ACCESS_PROLOGUE
 
 #define NAMED_ACCESS_WHITE_LIST(V)                                            \
   V("_internalBinding")
@@ -193,16 +199,22 @@ void PropertyDeleterCallback(
 
 #undef NAMED_ACCESS_WHITE_LIST
 
-  NAME_ACCESS_EPILOGUE
+  NAMED_ACCESS_EPILOGUE
 }
 
-#undef NAME_ACCESS_PROLOGUE
-#undef NAME_ACCESS_EPILOGUE
+#undef NAMED_ACCESS_PROLOGUE
+#undef NAMED_ACCESS_EPILOGUE
 #undef NAMED_ACCESS_CHECK
 
 void PropertyEnumeratorCallback(
       const v8::PropertyCallbackInfo<v8::Array>& args) {
-  UNREACHABLE();
+  Local<v8::Value> data = args.Data();
+  Environment* env =
+    reinterpret_cast<Environment*>(data.As<v8::External>()->Value());
+  if (!env->allow_runtime_args_access()) {
+    std::cerr << __FUNCTION__
+      << ": access to process is disallowed" << std::endl;
+  }
 }
 
 void IndexedPropertyGetterCallback(
