@@ -127,7 +127,10 @@ void PropertyGetterCallback(
   V("_internalBinding")                                                       \
   V("_linkedBinding")                                                         \
   V("binding")                                                                \
-  V("moduleLoadList")
+  V("moduleLoadList")                                                         \
+  V("_events")                                                                \
+  V("_maxListeners")                                                          \
+  V("_setupProcessObject")                                                    \
 
   NAMED_ACCESS_WHITE_LIST(NAMED_ACCESS_CHECK)
 
@@ -146,7 +149,11 @@ void PropertySetterCallback(
 #define NAMED_ACCESS_WHITE_LIST(V)                                            \
   V("_linkedBinding")                                                         \
   V("binding")                                                                \
-  V("moduleLoadList")
+  V("moduleLoadList")                                                         \
+  V("_events")                                                                \
+  V("_eventsCount")                                                           \
+  V("_maxListeners")                                                          \
+  V("_fatalException")                                                        \
 
 
   NAMED_ACCESS_WHITE_LIST(NAMED_ACCESS_CHECK)
@@ -193,7 +200,8 @@ void PropertyDeleterCallback(
   NAMED_ACCESS_PROLOGUE
 
 #define NAMED_ACCESS_WHITE_LIST(V)                                            \
-  V("_internalBinding")
+  V("_internalBinding")                                                       \
+  V("_setupProcessObject")
 
   NAMED_ACCESS_WHITE_LIST(NAMED_ACCESS_CHECK)
 
