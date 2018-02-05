@@ -136,6 +136,7 @@ void PropertyGetterCallback(
      libraries, return value of V8::GetVersion, uv_version_string,
      ulocdata_getCLDRVersion may varies */                                    \
   V("versions")                                                               \
+  V("_preload_modules")                                                       \
 
   NAMED_ACCESS_WHITE_LIST(NAMED_ACCESS_CHECK)
 
@@ -159,6 +160,8 @@ void PropertySetterCallback(
   V("_eventsCount")                                                           \
   V("_maxListeners")                                                          \
   V("_fatalException")                                                        \
+  V("domain")                                                                 \
+  V("_exiting")                                                               \
 
 
   NAMED_ACCESS_WHITE_LIST(NAMED_ACCESS_CHECK)
