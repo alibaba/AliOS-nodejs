@@ -147,6 +147,10 @@ void PropertyGetterCallback(
   V("cpuUsage")                                                               \
   V("memoryUsage")                                                            \
   V("_rawDebug")                                                              \
+  V("_noBrowserGlobals")                                                      \
+  V("platform")                                                               \
+  V("version")                                                                \
+  V("config")                                                                 \
 
   NAMED_ACCESS_WHITE_LIST(NAMED_ACCESS_CHECK)
 
