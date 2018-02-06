@@ -137,6 +137,16 @@ void PropertyGetterCallback(
      ulocdata_getCLDRVersion may varies */                                    \
   V("versions")                                                               \
   V("_preload_modules")                                                       \
+  V("on")                                                                     \
+  V("_eventsCount")                                                           \
+  V("emit")                                                                   \
+  V("_shouldAbortOnUncaughtToggle")                                           \
+  V("_setupPromises")                                                         \
+  V("_setupNextTick")                                                         \
+  V("hrtime")                                                                 \
+  V("cpuUsage")                                                               \
+  V("memoryUsage")                                                            \
+  V("_rawDebug")                                                              \
 
   NAMED_ACCESS_WHITE_LIST(NAMED_ACCESS_CHECK)
 
@@ -162,6 +172,20 @@ void PropertySetterCallback(
   V("_fatalException")                                                        \
   V("domain")                                                                 \
   V("_exiting")                                                               \
+  V("assert")                                                                 \
+  V("config")                                                                 \
+  V("setUncaughtExceptionCaptureCallback")                                    \
+  V("hasUncaughtExceptionCaptureCallback")                                    \
+  V("emitWarning")                                                            \
+  V("nextTick")                                                               \
+  V("_tickCallback")                                                          \
+  V("openStdin")                                                              \
+  V("hrtime")                                                                 \
+  V("cpuUsage")                                                               \
+  V("memoryUsage")                                                            \
+  V("exit")                                                                   \
+  V("kill")                                                                   \
+  V("_rawDebug")                                                              \
 
 
   NAMED_ACCESS_WHITE_LIST(NAMED_ACCESS_CHECK)
@@ -177,7 +201,10 @@ void PropertyDescriptorCallback(
   NAMED_ACCESS_PROLOGUE
 
 #define NAMED_ACCESS_WHITE_LIST(V)                                            \
-  V("moduleLoadList")
+  V("moduleLoadList")                                                         \
+  V("stdout")                                                                 \
+  V("stderr")                                                                 \
+  V("stdin")                                                                  \
 
   NAMED_ACCESS_WHITE_LIST(NAMED_ACCESS_CHECK)
 
@@ -193,7 +220,10 @@ void PropertyDefinerCallback(
   NAMED_ACCESS_PROLOGUE
 
 #define NAMED_ACCESS_WHITE_LIST(V)                                            \
-  V("moduleLoadList")
+  V("moduleLoadList")                                                         \
+  V("stdout")                                                                 \
+  V("stderr")                                                                 \
+  V("stdin")                                                                  \
 
   NAMED_ACCESS_WHITE_LIST(NAMED_ACCESS_CHECK)
 
@@ -209,7 +239,10 @@ void PropertyDeleterCallback(
 
 #define NAMED_ACCESS_WHITE_LIST(V)                                            \
   V("_internalBinding")                                                       \
-  V("_setupProcessObject")
+  V("_setupProcessObject")                                                    \
+  V("_shouldAbortOnUncaughtToggle")                                           \
+  V("_setupPromises")                                                         \
+  V("_setupNextTick")                                                         \
 
   NAMED_ACCESS_WHITE_LIST(NAMED_ACCESS_CHECK)
 
