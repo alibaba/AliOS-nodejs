@@ -156,6 +156,7 @@ void PropertyGetterCallback(
   V("domain")                                                                 \
   V("hasUncaughtExceptionCaptureCallback")                                    \
   V("setUncaughtExceptionCaptureCallback")                                    \
+  V("_debugEnd")                                                              \
 
 
   NAMED_ACCESS_WHITE_LIST(NAMED_ACCESS_CHECK)
