@@ -151,6 +151,12 @@ void PropertyGetterCallback(
   V("platform")                                                               \
   V("version")                                                                \
   V("config")                                                                 \
+  V("nextTick")                                                               \
+  V("_exiting")                                                               \
+  V("domain")                                                                 \
+  V("hasUncaughtExceptionCaptureCallback")                                    \
+  V("setUncaughtExceptionCaptureCallback")                                    \
+
 
   NAMED_ACCESS_WHITE_LIST(NAMED_ACCESS_CHECK)
 
@@ -209,6 +215,7 @@ void PropertyDescriptorCallback(
   V("stdout")                                                                 \
   V("stderr")                                                                 \
   V("stdin")                                                                  \
+  V("domain")                                                                 \
 
   NAMED_ACCESS_WHITE_LIST(NAMED_ACCESS_CHECK)
 
@@ -228,6 +235,7 @@ void PropertyDefinerCallback(
   V("stdout")                                                                 \
   V("stderr")                                                                 \
   V("stdin")                                                                  \
+  V("domain")                                                                 \
 
   NAMED_ACCESS_WHITE_LIST(NAMED_ACCESS_CHECK)
 
