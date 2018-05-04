@@ -1,0 +1,47 @@
+命令：
+  target上测试：
+    默认测试集：
+      python tools/run-tests.py --arch-and-mode=arm.release --no-i18n --target-root=/data/js-tests --no-presubmit > result.log
+    全测试集：
+      python tools/run-tests.py --arch-and-mode=arm.release --no-i18n --target-root=/data/js-tests --no-presubmit alltests > result.log
+  host上测试：
+    python tools/run-tests.py --arch-and-mode=x64.release --outdir=out --no-i18n --no-presubmit > result.log
+
+命令详解：
+  target上命令：
+    --arch-and-mode    指定跑测试用例的环境是arm、x64等等，是release或是debug模式。在盒子上跑release模式就是arm.release
+    --no-i18n          不测intl模块，就也是i8n标准，因为现在盒子上大多数会报非法访问，还未解决。
+    --target-root      指定盒子上放测试用例的目录，同时也是区分在pc上跑还是在盒子上跑的一个标志，如果不定义此参数，就能在pc上执行此测试用例。
+    --no-presubmit     不作lint检查
+    --download-data    下载测试代码。
+    --device           指定连接的设备号。
+    alltests           跑完整测试集，耗时很长，只有指定跑时才加，平时不用加，第一次跑必须加上--download-data参数。
+    > result.log       把测试结果保存到result.log文件中。
+  host上命令：
+    --arch-and-mode    pc上编译时所选的参数，如是x64.release,那就写x64.release
+    --no-i18n          因为盒子上都没测i18n，如果是为了与盒子测试做对比，那pc上也要加上这个参数，不测i18n。
+    --outdir           pc上编译的out目录，因为是在v8的根目录下执行命令，所以可以写相对路径，直接写out。
+    --download-data    下载测试代码。
+    --no-presubmit     不作lint检查
+    alltests           跑完整测试集，耗时很长，只有指定跑时才加，平时不用加，第一次跑必须加上--download-data参数。
+    > result.log       把测试结果保存到result.log文件中。
+
+PS:
+如果是要在host上运行，必须把test、tools两个目录覆盖掉v8根目录的对应目录。
+如果第一次加alltests参数跑，需要再加上--downdoad-data参数，因为有几个测试代码过大，工程里没有几个模块的测试代码，所以要下载。
+如果在push测试用例时中断，一定要把盒子里的对应目录删除，因为我判断要
+不要上传文件是看测试模块的目录存不存在，所以如果上传了一半，中断后不会
+继续上传。
+
+结果对比：
+使用tools/testResultCompare.py <result1>  <result2>,result1和result2分别是两次结果的文件，两个参数为必填项。
+
+设计思路:
+修改原测试框架让其能在target运行，并且也能在host上运行。
+为了达到这一目的，主要实施两个动作。第一，用--target-root参数来区分跑盒子还是pc。
+第二，跑盒子时，先把测试用例push到盒子里，再修改执行用例的命令行，让其实际在盒子中执行。
+因为测试用例的执行都要通过adb shell，所以取用例的结果的方法要改为在执行完测试用例后输出
+$?（上次执行程序的返回值）到标准输出中，再把结果过滤出来。
+
+问题集中营:
+因为所有命令都是通过adb shell来执行的，所以所有的引号，$符这一类的都需要加上转义符。

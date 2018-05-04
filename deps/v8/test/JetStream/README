@@ -1,0 +1,68 @@
+模块的出处：
+SunSpiderPayload
+	source---->https://github.com/WebKit/webkit/blob/master/PerformanceTests/SunSpider/tests/sunspider-1.0.2
+	base64.js---->http://lxr.mozilla.org/mozilla/source/extensions/xml-rpc/src/nsXmlRpcClient.js#956
+	crypto-aes.js---->http://www.movable-type.co.uk/scripts/aes.html
+	cyypto-md5.js---->http://pajhome.org.uk/crypt/md5/ Jetstream有一些改动
+	cyypto-sha1.js---->http://pajhome.org.uk/crypt/md5/ Jetstream有一些改动
+	date-format-tofte.js---->http://www.php.net/date 基于这个实现的日期格式化函数
+	date-format-xparb---->https://github.com/jmarca/date-functions/blob/master/lib/date-functions.js Jetstream有一些改动
+	n-body.js---->http://benchmarksgame.alioth.debian.org/u64q/program.php?test=nbody&lang=v8&id=1
+	regex-dna.js---->http://benchmarksgame.alioth.debian.org/u64q/program.php?test=regexdna&lang=v8&id=1
+
+Octane2
+	source---->https://github.com/chromium/octane.git 
+	commit---->e43071e6cdaa5557ffc0b19645e0a5da9c6617ba 这是版本2的第一个提交
+
+Octane
+	source---->https://github.com/chromium/octane.git 
+	commit---->61bf475784dc6784a7ccf8b4d0918c239ca1232d 这是版本1的第一个提交
+
+CDjs
+	source---->https://www.cs.purdue.edu/sss/projects/cdx/
+
+SimplePayload
+	bigfib.cpp---->https://github.com/llvm-mirror/test-suite/blob/master/SingleSource/Benchmarks/Misc-C%2B%2B/bigfib.cpp
+	container.cpp---->https://github.com/llvm-mirror/test-suite/blob/master/SingleSource/Benchmarks/Misc-C%2B%2B/stepanov_container.cpp
+	gcc-loops.cpp---->https://github.com/llvm-mirror/test-suite/blob/master/SingleSource/UnitTests/Vectorizer/gcc-loops.cpp
+	dry.c---->https://github.com/llvm-mirror/test-suite/blob/5741100736964bc8bc836b121063e65cffb0f053/SingleSource/Benchmarks/Dhrystone/dry.c 有细微的改动
+	float-mm.c---->https://github.com/llvm-mirror/test-suite/blob/master/SingleSource/Benchmarks/Stanford/FloatMM.c
+	n-body.c---->https://github.com/llvm-mirror/test-suite/blob/master/SingleSource/Benchmarks/BenchmarkGame/n-body.c
+	quicksort.c---->https://github.com/llvm-mirror/test-suite/blob/master/SingleSource/Benchmarks/Stanford/quicksort.c
+	towers.c---->https://github.com/llvm-mirror/test-suite/blob/master/SingleSource/Benchmarks/Stanford/towers.c
+
+
+设计原理：
+因为每个模块运行策略不一样，要融合在一起，我采取了拼接方法。就是把我要加的代码和模块自身代码拼接成一个新的js文件来执行。
+每个模块按各自需求取得运行时间，算出平均值和平均偏差以<xxx:100 +/-10>格式输出。
+总分算法是把每个模块的第一次结果取自然对数相加球平均值再把值传入exp指数函数得出结果作为第一次的分数，如此循环算出每次结果，再求平均值和平均偏差以<xxx:100 +/-10>格式输出。
+
+
+测试模块介绍：
+暂无
+
+
+下面为每个模块的运行策略：
+SunSpiderPayload: 
+	使用load函数加载要运行的js文件，再使用Date类来计算运行时间，再用try/catch包着所有代码，catch中输出"run_err"字符串，方便记录异常结果。
+	运行测试代码之前先给cpu预热，循环执行Math.sin Math.cos之类的函数，之后再运行测试代码。
+
+Octane2:
+	使用load函数加载要运行的js文件，因为Octane2自有一套运行框架，只需要调用即可。因为框架中有try/catch，所以不能再包try/catch，此模块暂时无法记录异常，发生异常时会导致框架出错。
+
+Octane2:
+	使用load函数加载要运行的js文件，因为Octane自有一套运行框架，只需要调用即可。因为框架中有try/catch，所以不能再包try/catch，此模块暂时无法记录异常，发生异常时会导致框架出错。
+
+CDjs:
+	使用load函数加载要运行的js文件，再使用Date类来计算运行时间，再用try/catch包着所有代码，catch中输出"run_err"字符串，方便记录异常结果。
+
+SimplePayload:
+	使用load函数加载要运行的js文件，再使用Date类来计算运行时间，再用try/catch包着所有代码，catch中输出"run_err"字符串，方便记录异常结果。
+
+
+用法：
+python run.py <d8路径> [num执行的次数，默认为3]
+
+例子：
+python run.py ../out/Release/d8
+python run.py ../out/Release/d8 10 //改为执行10次

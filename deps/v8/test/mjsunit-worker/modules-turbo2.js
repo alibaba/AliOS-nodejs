@@ -1,0 +1,22 @@
+// Copyright 2017 the V8 project authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// MODULE
+// Flags: --allow-natives-syntax
+
+if (!isworker()) {
+	for (var i = 0; i < ThreadWorkerCount; i++) {
+	var worker = new ThreadWorker("test/mjsunit-worker/mjsunit.js","test/mjsunit-worker//modules-turbo2.js");
+	}
+}
+export let x = 0;
+
+function foo() { return x++ };
+
+function gaga(f) { return f() };
+
+assertEquals(0, gaga(foo));
+assertEquals(1, gaga(foo));
+%OptimizeFunctionOnNextCall(gaga);
+assertEquals(2, gaga(foo));
